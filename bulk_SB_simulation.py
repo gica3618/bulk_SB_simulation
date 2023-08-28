@@ -174,6 +174,10 @@ class SingleSimulation():
         command = f'simulateSB.py {self.project_code} {self.SB} {self.epoch}'
         if self.array_config is not None:
             command += f' -C {self.array_config}'
+            if self.array_config[-4:] == '.cfg':
+                logging.info('will use cfg file {self.array_config}, copying it'
+                             +' to the work folder')
+                shutil.copy(src=self.array_config,dst=self.output_folder)
         logging.info('going to execute the following command:')
         logging.info(command)
         os.chdir(self.output_folder)
@@ -190,7 +194,9 @@ class SingleSimulation():
             stdout = [s for s in stdout if s!='']
             found_error_message = False
             for message in stdout[::-1]:
-                if message[:6] == 'ERROR' or message[:10] == 'Exception:':
+                casefolded_message = message.casefold()
+                if 'error' in casefolded_message\
+                                     or 'exception' in casefolded_message:
                     found_error_message = True
                     fail_reason = message
             if not found_error_message:
@@ -229,10 +235,12 @@ class SingleSimulation():
 
 class BulkSimulation():
 
-    SB_data_to_extract = ('code','sbname','p2g_account','sb_state')
+    SB_data_to_extract = ('code','sbname','p2g_account','sb_state',
+                          'dc_letter_grade')
 
-    def __init__(self,SB_list):
+    def __init__(self,SB_list,custom_SB_filter=None):
         self.SB_list = SB_list
+        self.custom_SB_filter = custom_SB_filter
         self.read_SB_list()
         self.extract_SB_data_to_simulate()
 
@@ -246,6 +254,20 @@ class BulkSimulation():
                     data[fieldname].append(value)
         self.raw_SB_data = data
 
+    def get_custom_selection(self):
+        keys = list(self.raw_SB_data.keys())
+        n_raw_SBs = len(self.raw_SB_data[keys[0]])
+        if self.custom_SB_filter is None:
+            logging.info('no custom selection of SBs')
+            custom_selection = [True,]*n_raw_SBs
+        else:
+            logging.info('doing custom selection of SBs')
+            custom_selection = []
+            for i in range(n_raw_SBs):
+                data = {key:d[i] for key,d in self.raw_SB_data.items()}
+                custom_selection.append(self.custom_SB_filter(data))
+        return custom_selection
+
     def extract_SB_data_to_simulate(self):
         raise NotImplementedError
 
@@ -258,13 +280,13 @@ class BulkSimulation():
         else:
             min_HA = Angle(-4*u.hour)
             max_HA = Angle(3*u.hour)
-        logging.info(f'preliminary HA range: {min_HA.hour} h - {max_HA.hour} h')
+        logging.info(f'preliminary HA range: {min_HA.hour} h to {max_HA.hour} h')
         #however, P2G can change the allowed HA in the SB, so we need to adjust
         #the HA if necessary:
         allowed_HA = ot_xml.read_allowed_HA()
         for key,HA in allowed_HA.items():
             error_message = f'need allowed_HA ({key}) to wrap at 12h to be'\
-                             +'comparable to min_HA and max_HA'
+                             +' comparable to min_HA and max_HA'
             #because of rounding errors, I need to make the following comparison
             #in degrees, not in hour... (Angle(180*u.deg).HA gives
             #12.000000000000002)
@@ -272,7 +294,7 @@ class BulkSimulation():
         assert allowed_HA['min'] < allowed_HA['max']
         min_HA = Angle(max(min_HA.hour,allowed_HA['min'].hour) * u.hour)
         max_HA = Angle(min(max_HA.hour,allowed_HA['max'].hour) * u.hour)
-        logging.info(f'HA range after reading xml: {min_HA.hour} h - {max_HA.hour} h')
+        logging.info(f'HA range after reading xml: {min_HA.hour} h to {max_HA.hour} h')
         #for Pol observations, there is an additional condition on the HA:
         #for the first execution of the SB, Pol Cal needs to have HA between -4 and -0.5
         #but we only need to adjust the lower bound (min_HA). The reason is that if
@@ -284,7 +306,7 @@ class BulkSimulation():
         #first execution. So we should not decrease max_HA
         if ot_xml.is_Polarisation():
             logging.info('polarization SB, going to check if min HA needs'
-                         +'to be adjudsted')
+                         +' to be adjudsted')
             min_pol_cal_HA = Angle(-4*u.hour)
             pol_cal_coord = ot_xml.get_PolCal_coordinates()
             logging.info(f'Pol Cal RA: {pol_cal_coord.ra.deg} deg')
@@ -300,7 +322,7 @@ class BulkSimulation():
             target_HA_for_min_pol_cal_HA.wrap_at(12*u.hour,inplace=True)
             min_HA = Angle(max(min_HA.hour,target_HA_for_min_pol_cal_HA.hour)
                            *u.hour)
-            logging.info(f'min HA after checking pol cal: {min_HA} h')
+            logging.info(f'min HA after checking pol cal: {min_HA.hour} h')
         return min_HA,max_HA
 
     def get_transits(self,min_HA,max_HA):
@@ -402,10 +424,11 @@ class BulkSimulation12m(BulkSimulation):
 
     excluded_states = ('FullyObserved','ObservingTimedOut')
 
-    def __init__(self,SB_list,array_config,support_arcs):
+    def __init__(self,SB_list,array_config,support_arcs,custom_SB_filter=None):
         self.support_arcs = support_arcs
         self.array_config = array_config
-        BulkSimulation.__init__(self,SB_list=SB_list)
+        BulkSimulation.__init__(self,SB_list=SB_list,
+                                custom_SB_filter=custom_SB_filter)
 
     def get_array_configs(self,ot_xml):
         return [self.array_config,]
@@ -426,19 +449,25 @@ class BulkSimulation12m(BulkSimulation):
         config_key = f'selected_c{config_number}'
         array_config_selection = [entry=='TRUE' for entry in
                                   self.raw_SB_data[config_key]]
-        selection = [(arc_selected and state_selected and config_selected) for
-                     arc_selected,state_selected,config_selected in
-                     zip(support_arc_selection,state_selection,array_config_selection)]
+        custom_selection = self.get_custom_selection()
+        assert len(support_arc_selection) == len(state_selection)\
+                 == len(array_config_selection) == len(custom_selection)
+        all_selections = [support_arc_selection,state_selection,
+                          array_config_selection,custom_selection]
+        selection = list(map(all, zip(*all_selections)))
         self.selected_SBs = {}
         for fieldname in self.SB_data_to_extract:
             self.selected_SBs[fieldname] = list(itertools.compress(
                                            self.raw_SB_data[fieldname],selection))
+        logging.info(f'of {len(selection)} SBs in the list, {selection.sum()}'
+                     +' were selected')
 
 
 class BulkSimulation7m(BulkSimulation):
 
     project_tracker_fieldnames = {'code':'Project Code','sbname':'SB Name',
-                                  'p2g_account':'P2G','sb_state':'State'}
+                                  'p2g_account':'P2G','sb_state':'State',
+                                  'dc_letter_grade':'Grade'}
 
     def get_array_configs(self,ot_xml):
         TP_config = ['aca.cm10.pm3.cfg',]
@@ -458,23 +487,39 @@ class BulkSimulation7m(BulkSimulation):
                 return all_configs
 
     def extract_SB_data_to_simulate(self):
-        #I assume PT list does not need to be filtered
+        #the list extracted from PT should already be filtered for support ARC,
+        #SB state,... so we only apply a custom filter, if any
         self.selected_SBs = {}
+        custom_selection = self.get_custom_selection()
         for key,PT_key in self.project_tracker_fieldnames.items():
-            self.selected_SBs[key] = self.raw_SB_data[PT_key]
+            self.selected_SBs[key] = list(itertools.compress(
+                                         self.raw_SB_data[PT_key],custom_selection))
+        n_selected_SBs = len(list(self.selected_SBs.values())[0])
+        logging.info(f'of {len(custom_selection)} SBs in the list, '
+                     +f'{n_selected_SBs} were selected')
 
 
 if __name__ == '__main__':
     from datetime import date
-    import sys
     logging.basicConfig(format='%(levelname)s: %(message)s',level=logging.INFO,
                         stream=sys.stdout)
     
-    test_xml = OT_XML_File('example_xml_files/example_polarisation_2022.1.01477.S_polRA_5deg_RepRA_355deg.xml')
-    #test_xml = OT_XML_File('example_xml_files/example_polarisation_2022.1.01477.S_polRA_356deg_RepRA_5deg.xml')
-    test_sim = BulkSimulation12m(SB_list='lookup_table_for_test.csv',
-                                 support_arcs=['EA',],array_config='c43-9')
-    HA_range = test_sim.determine_HA_range_to_simulate(ot_xml=test_xml)
-    print(HA_range)
+    # test_xml = OT_XML_File('example_xml_files/example_polarisation_2022.1.01477.S_polRA_5deg_RepRA_355deg.xml')
+    # #test_xml = OT_XML_File('example_xml_files/example_polarisation_2022.1.01477.S_polRA_356deg_RepRA_5deg.xml')
+    # test_sim = BulkSimulation12m(SB_list='lookup_table_for_test.csv',
+    #                              support_arcs=['EA',],array_config='c43-9')
+    # HA_range = test_sim.determine_HA_range_to_simulate(ot_xml=test_xml)
+    # print(HA_range)
+
+    # def custom_filter(dat):
+    #     return dat['dc_letter_grade'] == 'B'
+    # test_sim = BulkSimulation12m(SB_list='../lookup_table_12mSBs_20230828.csv',
+    #                               support_arcs=['EA',],array_config='c43-9',
+    #                               custom_SB_filter=custom_filter)
+
+    def custom_filter(dat):
+        return dat['Project Code'][:4] != '2023'
+    test_sim = BulkSimulation7m(SB_list='../SBs_7m_2023-08-28.csv',
+                                custom_SB_filter=None)
 
     #test_xml = OT_XML_File('example_VLBI_2022.1.01268.V.xml')
