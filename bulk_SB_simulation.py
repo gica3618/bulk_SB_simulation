@@ -175,7 +175,7 @@ class SingleSimulation():
         if self.array_config is not None:
             command += f' -C {self.array_config}'
             if self.array_config[-4:] == '.cfg':
-                logging.info('will use cfg file {self.array_config}, copying it'
+                logging.info(f'will use cfg file {self.array_config}, copying it'
                              +' to the work folder')
                 shutil.copy(src=self.array_config,dst=self.output_folder)
         logging.info('going to execute the following command:')
@@ -183,24 +183,38 @@ class SingleSimulation():
         os.chdir(self.output_folder)
         output = subprocess.run(command,shell=True,universal_newlines=True,
                                 stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        logging.info('stdout of simulateSB.py:')
-        logging.info(output.stdout)
-        logging.error('error messages from simulateSB.py:')
-        logging.error(output.stderr)
+        pipe = {'stdout':output.stdout,'stderr':output.stderr}
+        loggers = {'stdout':logging.info,'stderr':logging.error}
+        for key,logger in loggers.items():
+            logger(f'{key} of simulateSB.py:')
+            logger(pipe[key])
         if output.returncode != 0:
             success = False
-            stdout = output.stdout
-            stdout = stdout.split('\n')
-            stdout = [s for s in stdout if s!='']
+            pipe_messages = {key:p.split('\n') for key,p in pipe.items()}
+            pipe_messages = {key:[m for m in messages if m!=''] for key,messages
+                             in pipe_messages.items()}
             found_error_message = False
-            for message in stdout[::-1]:
-                casefolded_message = message.casefold()
-                if 'error' in casefolded_message\
-                                     or 'exception' in casefolded_message:
-                    found_error_message = True
-                    fail_reason = message
+            msg_iterator = itertools.zip_longest(pipe_messages['stdout'][::-1],
+                                                 pipe_messages['stderr'][::-1],
+                                                 fillvalue='')
+            max_messages_to_go_back = 5
+            for i,(std_msg,error_msg) in enumerate(msg_iterator):
+                #give preference to error_msg (i.e. check it first):
+                for msg in (error_msg,std_msg):
+                    casefolded_msg = msg.casefold()
+                    if 'error' in casefolded_msg\
+                                         or 'exception' in casefolded_msg:
+                        logging.info('identified output error message from failed '
+                                     +f'simulation: {msg}')
+                        found_error_message = True
+                        fail_reason = msg
+                        break
+                if found_error_message or i >= max_messages_to_go_back-1:
+                    break
             if not found_error_message:
-                fail_reason = stdout[-1]
+                logging.info('did not find error message, will take last output'
+                             +' of stdout instead')
+                fail_reason = pipe['stdout'][-1]
         else:
             if self.summary_file_reports_success():
                 success = True
