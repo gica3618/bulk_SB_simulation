@@ -194,6 +194,7 @@ class SingleSimulation():
             pipe_messages = {key:[m for m in messages if m!=''] for key,messages
                              in pipe_messages.items()}
             found_error_message = False
+            #check messages, starting from the latest
             msg_iterator = itertools.zip_longest(pipe_messages['stdout'][::-1],
                                                  pipe_messages['stderr'][::-1],
                                                  fillvalue='')
