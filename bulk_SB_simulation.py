@@ -18,7 +18,7 @@ import logging
 from astropy import units as u
 from astropy.coordinates import Angle,SkyCoord
 import sys
-
+    
 
 class OT_XML_File():
     sbl = 'Alma/ObsPrep/SchedBlock'
@@ -252,10 +252,14 @@ class BulkSimulation():
 
     SB_data_to_extract = ('code','sbname','p2g_account','sb_state',
                           'dc_letter_grade')
+    ALMA_site_latitude = np.radians(-23.029)
+    min_elevation = np.radians(20)
+    max_elevation = np.radians(88)
 
-    def __init__(self,SB_list,custom_SB_filter=None):
+    def __init__(self,SB_list,custom_SB_filter=None,HAs=None):
         self.SB_list = SB_list
         self.custom_SB_filter = custom_SB_filter
+        self.HAs = HAs
         self.read_SB_list()
         self.extract_SB_data_to_simulate()
 
@@ -286,8 +290,8 @@ class BulkSimulation():
     def extract_SB_data_to_simulate(self):
         raise NotImplementedError
 
-    def determine_HA_range_to_simulate(self,ot_xml):
-        rep_coord = ot_xml.get_representative_coordinates()
+    def determine_min_max_HA_to_simulate(self,OT_xml):
+        rep_coord = OT_xml.get_representative_coordinates()
         #DSA will consider the following HA limits:
         if rep_coord.dec.deg >= -5:
             min_HA = Angle(-3*u.hour)
@@ -298,7 +302,7 @@ class BulkSimulation():
         logging.info(f'preliminary HA range: {min_HA.hour} h to {max_HA.hour} h')
         #however, P2G can change the allowed HA in the SB, so we need to adjust
         #the HA if necessary:
-        allowed_HA = ot_xml.read_allowed_HA()
+        allowed_HA = OT_xml.read_allowed_HA()
         for key,HA in allowed_HA.items():
             error_message = f'need allowed_HA ({key}) to wrap at 12h to be'\
                              +' comparable to min_HA and max_HA'
@@ -319,11 +323,11 @@ class BulkSimulation():
         #than what is allowed by pol cal. On the other hand, we can do the second
         #execution at an HA that is larger than what would be allowed in the
         #first execution. So we should not decrease max_HA
-        if ot_xml.is_Polarisation():
+        if OT_xml.is_Polarisation():
             logging.info('polarization SB, going to check if min HA needs'
                          +' to be adjudsted')
             min_pol_cal_HA = Angle(-4*u.hour)
-            pol_cal_coord = ot_xml.get_PolCal_coordinates()
+            pol_cal_coord = OT_xml.get_PolCal_coordinates()
             logging.info(f'Pol Cal RA: {pol_cal_coord.ra.deg} deg')
             logging.info(f'representative coord RA: {rep_coord.ra.deg} deg')
             #note that in special cases, delta_ra can be very large although
@@ -340,31 +344,40 @@ class BulkSimulation():
             logging.info(f'min HA after checking pol cal: {min_HA.hour} h')
         return min_HA,max_HA
 
-    def get_transits(self,min_HA,max_HA):
+    def get_HAs_to_simulate(self,OT_xml):
+        if self.HAs is not None:
+            return [Angle(HA*u.hour) for HA in self.HAs]
+        min_HA,max_HA = self.determine_min_max_HA_to_simulate(OT_xml=OT_xml)
         min_HA,max_HA = min_HA.hour,max_HA.hour
         assert min_HA < max_HA
-        transit_offsets = [min_HA,max_HA]
-        trans = np.ceil(min_HA).astype(int)
-        while trans < max_HA:
-            transit_offsets.append(trans)
-            trans += 1
-        transit_offsets = np.unique(transit_offsets)
-        transits = []
-        for transit_offset in transit_offsets:
-            if transit_offset == 0:
-                transits.append('TRANSIT')
-            else:
-                sign = np.sign(transit_offset)
-                if sign == 1:
-                    sign_str = '+'
-                else:
-                    assert sign == -1
-                    sign_str = '-'
-                transits.append(f'TRANSIT{sign_str}{np.abs(transit_offset)}h')
-        return transits
+        HAs = [min_HA,max_HA]
+        HA = np.ceil(min_HA).astype(int)
+        while HA < max_HA:
+            HAs.append(HA)
+            HA += 1
+        HAs = np.unique(HAs)
+        return [Angle(HA*u.hour) for HA in HAs]
 
-    def get_array_configs(self,ot_xml):
+    @staticmethod
+    def convert_HA_to_str(HA):
+        if HA.hour == 0:
+            return 'TRANSIT'
+        else:
+            sign = np.sign(HA.hour)
+            if sign == 1:
+                sign_str = '+'
+            else:
+                assert sign == -1
+                sign_str = '-'
+            return f'TRANSIT{sign_str}{np.abs(HA.hour)}h'
+
+    def get_array_configs(self,OT_xml):
         raise NotImplementedError
+
+    def get_elevation_at_ALMA_site(self,DEC,HA):
+        sin_elevation = np.sin(self.ALMA_site_latitude)*np.sin(DEC.rad)\
+              + np.cos(self.ALMA_site_latitude)*np.cos(DEC.rad)*np.cos(HA.rad)
+        return np.arcsin(sin_elevation)
 
     def run_simulations(self,obs_dates):
         project_codes = self.selected_SBs['code']
@@ -376,42 +389,62 @@ class BulkSimulation():
             print(f'simulating SB {i+1}/{n_projects}')
             SB = self.selected_SBs['sbname'][i]
             print(f'SB name: {SB} ({code})')
-            ot_xml = OT_XML_File.from_download(project_code=code,SB=SB)
-            if ot_xml.is_Solar():
+            OT_xml = OT_XML_File.from_download(project_code=code,SB=SB)
+            if OT_xml.is_Solar():
                 logging.info('project is solar, will not simulate')
                 continue
-            if ot_xml.is_VLBI():
+            if OT_xml.is_VLBI():
                 logging.info('project is VLBI, will not simulate')
                 continue
             executed_simulation = {'project_code':code,'SB':SB,
                                    'p2g':self.selected_SBs['p2g_account'][i],
                                    'sb_state':self.selected_SBs['sb_state'][i],
                                    'failed_commands':[],'fail_reasons':[]}
-            if ot_xml.is_Polarisation():
-                if not ot_xml.PolCal_is_fixed():
+            if OT_xml.is_Polarisation():
+                if not OT_xml.PolCal_is_fixed():
                     logging.info('Pol Cal is not fixed. Not going to simulate')
-                    executed_simulation['failed_commands'] = 'N/A (no simulation)'
-                    executed_simulation['fail_reasons'] = 'Pol Cal is not fixed'
+                    executed_simulation['failed_commands'].append('N/A (no simulation)')
+                    executed_simulation['fail_reasons'].append('Pol Cal is not fixed')
                     self.executed_simulations.append(executed_simulation)
                     continue
                 else:
                     logging.info('Pol Cal is fixed, as expected')
-            min_HA,max_HA = self.determine_HA_range_to_simulate(ot_xml=ot_xml)
-            transits = self.get_transits(min_HA=min_HA,max_HA=max_HA)
-            logging.info('transits to simulate: '+str(transits))
-            array_configs = self.get_array_configs(ot_xml=ot_xml)
-            for transit,obs_date,array_config in\
-                              itertools.product(transits,obs_dates,array_configs):
-                epoch = f'{transit},{obs_date.isoformat()}'
+            HAs = self.get_HAs_to_simulate(OT_xml=OT_xml)
+            logging.info('HAs to simulate: '+str([HA.hour for HA in HAs]))
+            array_configs = self.get_array_configs(OT_xml=OT_xml)
+            representative_coord = OT_xml.get_representative_coordinates()
+            at_least_1_simulation_ran = False
+            for HA,obs_date,array_config in\
+                              itertools.product(HAs,obs_dates,array_configs):
+                logging.info(f'considering HA={HA.hour}, config={array_config}')
+                representative_target_elevation = self.get_elevation_at_ALMA_site(
+                                                   DEC=representative_coord.dec,HA=HA)
+                if representative_target_elevation < self.min_elevation:
+                    logging.info('representative target elevation too low, '
+                                 'will not show up in DSA, skipping simulation')
+                    continue
+                if representative_target_elevation > self.max_elevation:
+                    logging.info('representative target elevation too high, '
+                                 'will not show up in DSA, skipping simulation')
+                    continue
+                HA_str = self.convert_HA_to_str(HA=HA)
+                epoch = f'{HA_str},{obs_date.isoformat()}'
                 logging.info(f'simulating with epoch={epoch}')
                 simulation = SingleSimulation(project_code=code,SB=SB,epoch=epoch,
                                               array_config=array_config)
                 command,success,fail_reason = simulation.run()
+                at_least_1_simulation_ran = True
                 if not success:
                     executed_simulation['failed_commands'].append(command)
                     executed_simulation['fail_reasons'].append(fail_reason)
                     print(f'simulation failed ({command})')
-            simulation.delete_output_folder()
+            if at_least_1_simulation_ran:
+                simulation.delete_output_folder()
+            else:
+                logging.warn('All simulations for {code} were skipped')
+                executed_simulation['failed_commands'].append('None')
+                executed_simulation['fail_reasons'].append(
+                                  'All simulations skipped, please investigate')
             self.executed_simulations.append(executed_simulation)
             end = time.time()
             execution_times.append(end-start)
@@ -434,18 +467,23 @@ class BulkSimulation():
                 writer.writerow(sim)
         print(f'wrote failed simulations to {filepath}')
 
+    def print_statistics(self):
+        #TODO implement
+        raise NotImplementedError
+
 
 class BulkSimulation12m(BulkSimulation):
 
     excluded_states = ('FullyObserved','ObservingTimedOut')
 
-    def __init__(self,SB_list,array_config,support_arcs,custom_SB_filter=None):
+    def __init__(self,SB_list,array_config,support_arcs,custom_SB_filter=None,
+                 HAs=None):
         self.support_arcs = support_arcs
         self.array_config = array_config
         BulkSimulation.__init__(self,SB_list=SB_list,
-                                custom_SB_filter=custom_SB_filter)
+                                custom_SB_filter=custom_SB_filter,HAs=HAs)
 
-    def get_array_configs(self,ot_xml):
+    def get_array_configs(self,OT_xml):
         return [self.array_config,]
 
     def get_array_config_number(self):
@@ -484,10 +522,17 @@ class BulkSimulation7m(BulkSimulation):
                                   'p2g_account':'P2G','sb_state':'State',
                                   'dc_letter_grade':'Grade'}
 
-    def get_array_configs(self,ot_xml):
+    def __init__(self,SB_list,array_configs=None,custom_SB_filter=None,HAs=None):
+        self.array_configs = array_configs
+        BulkSimulation.__init__(self,SB_list=SB_list,
+                                custom_SB_filter=custom_SB_filter,HAs=HAs)
+
+    def get_array_configs(self,OT_xml):
+        if self.array_configs is not None:
+            return self.array_configs
         TP_config = ['aca.cm10.pm3.cfg',]
         all_configs = ['7m','aca.cm11.cfg'] + TP_config
-        requires_TP = ot_xml.read_RequiresTPAntenna()
+        requires_TP = OT_xml.read_RequiresTPAntenna()
         if requires_TP is None:
             #this happens for SBs before cycle 10
             logging.info('did not find RequiresTPAntenna in the xml,'+
@@ -503,7 +548,7 @@ class BulkSimulation7m(BulkSimulation):
 
     def extract_SB_data_to_simulate(self):
         #the list extracted from PT should already be filtered for support ARC,
-        #SB state,... so we only apply a custom filter, if any
+        #SB state etc., so we only apply a custom filter, if any
         self.selected_SBs = {}
         custom_selection = self.get_custom_selection()
         for key,PT_key in self.project_tracker_fieldnames.items():
@@ -523,7 +568,7 @@ if __name__ == '__main__':
     # #test_xml = OT_XML_File('example_xml_files/example_polarisation_2022.1.01477.S_polRA_356deg_RepRA_5deg.xml')
     # test_sim = BulkSimulation12m(SB_list='lookup_table_for_test.csv',
     #                              support_arcs=['EA',],array_config='c43-9')
-    # HA_range = test_sim.determine_HA_range_to_simulate(ot_xml=test_xml)
+    # HA_range = test_sim.determine_min_max_HA_to_simulate(OT_xml=test_xml)
     # print(HA_range)
 
     # def custom_filter(dat):
@@ -532,9 +577,14 @@ if __name__ == '__main__':
     #                               support_arcs=['EA',],array_config='c43-9',
     #                               custom_SB_filter=custom_filter)
 
-    def custom_filter(dat):
-        return dat['Project Code'][:4] != '2023'
-    test_sim = BulkSimulation7m(SB_list='../SBs_7m_2023-08-28.csv',
-                                custom_SB_filter=None)
+    # def custom_filter(dat):
+    #     return dat['Project Code'][:4] != '2023'
+    # test_sim = BulkSimulation7m(SB_list='../SBs_7m_2023-09-15.csv',
+    #                             custom_SB_filter=None)
 
     #test_xml = OT_XML_File('example_VLBI_2022.1.01268.V.xml')
+    
+    test_sim = BulkSimulation7m(SB_list='SBs_7m_test_elevation.csv',
+                                custom_SB_filter=None)
+    test_sim.run_simulations(obs_dates=[date(year=2023,month=10,day=1),])
+    test_sim.write_failed_simulations_to_csvfile(filepath='test_output.csv')
