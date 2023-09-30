@@ -363,16 +363,20 @@ class BulkSimulation():
         if HA.hour == 0:
             return 'TRANSIT'
         else:
-            sign = np.sign(HA.hour)
-            if sign == 1:
-                sign_str = '+'
-            else:
-                assert sign == -1
-                sign_str = '-'
-            return f'TRANSIT{sign_str}{np.abs(HA.hour)}h'
+            return f'TRANSIT{HA.hour:+}h'
+            # sign = np.sign(HA.hour)
+            # if sign == 1:
+            #     sign_str = '+'
+            # else:
+            #     assert sign == -1
+            #     sign_str = '-'
+            # return f'TRANSIT{sign_str}{np.abs(HA.hour)}h'
 
     def get_array_configs(self,OT_xml):
         raise NotImplementedError
+
+    def get_n_selected_SBs(self):
+        return len(list(self.selected_SBs.values())[0])
 
     def get_elevation_at_ALMA_site(self,DEC,HA):
         sin_elevation = np.sin(self.ALMA_site_latitude)*np.sin(DEC.rad)\
@@ -399,6 +403,7 @@ class BulkSimulation():
             executed_simulation = {'project_code':code,'SB':SB,
                                    'p2g':self.selected_SBs['p2g_account'][i],
                                    'sb_state':self.selected_SBs['sb_state'][i],
+                                   'executed_commands':[],
                                    'failed_commands':[],'fail_reasons':[]}
             if OT_xml.is_Polarisation():
                 if not OT_xml.PolCal_is_fixed():
@@ -433,10 +438,13 @@ class BulkSimulation():
                 simulation = SingleSimulation(project_code=code,SB=SB,epoch=epoch,
                                               array_config=array_config)
                 command,success,fail_reason = simulation.run()
+                executed_simulation['executed_commands'].append(command)
                 at_least_1_simulation_ran = True
                 if not success:
                     executed_simulation['failed_commands'].append(command)
                     executed_simulation['fail_reasons'].append(fail_reason)
+                    for key in ('SB','sb_state'):
+                        executed_simulation[key] = 'N/A'
                     print(f'simulation failed ({command})')
             if at_least_1_simulation_ran:
                 simulation.delete_output_folder()
@@ -462,14 +470,47 @@ class BulkSimulation():
             for sim in self.executed_simulations:
                 if len(sim['failed_commands']) == 0:
                     continue
+                #need to take a copy such that the original sim does not get modified
+                output_sim = sim.copy()
                 for key in ('fail_reasons','failed_commands'):
-                    sim[key] = '\n'.join(sim[key])
-                writer.writerow(sim)
+                    output_sim[key] = '\n'.join(output_sim[key])
+                writer.writerow(output_sim)
         print(f'wrote failed simulations to {filepath}')
 
     def print_statistics(self):
-        #TODO implement
-        raise NotImplementedError
+        #TODO test this
+        simulations_with_failure = [sim for sim in self.executed_simulations
+                                    if len(sim['failed_commands'])>0]
+        failed_project_codes = [sim['project_code'] for sim in
+                                simulations_with_failure]
+        failed_project_codes = set(failed_project_codes)
+        all_project_codes = set(self.selected_SBs['code'])
+        print(f'total number of projects: {len(all_project_codes)}')
+        print('number of projects with at least one failed simulation: '+
+              f'{len(failed_project_codes)}')
+        print(f'total number of SBs: {self.get_n_selected_SBs()}')
+        print(f'total number of SBs simulated: {len(self.executed_simulations)}')
+        print('number of SBs with at least one failed simulation: '+
+              f'{len(simulations_with_failure)}')
+        n_simulations = sum([len(sim['executed_commands']) for sim in
+                             self.executed_simulations])
+        n_failed_simulations = sum([len(sim['failed_commands']) for sim in
+                                    simulations_with_failure])
+        print(f'total number of simulations: {n_simulations}')
+        print(f'total number of failed simulations: {n_failed_simulations}')
+        fail_reasons = []
+        for sim in simulations_with_failure:
+            fail_reasons += sim['fail_reasons']
+        unique_fail_reasons = set(fail_reasons)
+        fail_reason_counts = {fail_reason:fail_reasons.count(fail_reason)
+                              for fail_reason in unique_fail_reasons}
+        #order the dict by the number of counts:
+        fail_reason_counts = {fail_reason:count for fail_reason,count in
+                              sorted(fail_reason_counts.items(),
+                                     key=lambda item:-item[1])}
+        print('fail reason counts:')
+        for fail_reason,count in fail_reason_counts.items():
+            print(f'- "{fail_reason}": {count}')
 
 
 class BulkSimulation12m(BulkSimulation):
@@ -554,9 +595,8 @@ class BulkSimulation7m(BulkSimulation):
         for key,PT_key in self.project_tracker_fieldnames.items():
             self.selected_SBs[key] = list(itertools.compress(
                                          self.raw_SB_data[PT_key],custom_selection))
-        n_selected_SBs = len(list(self.selected_SBs.values())[0])
         logging.info(f'of {len(custom_selection)} SBs in the list, '
-                     +f'{n_selected_SBs} were selected')
+                     +f'{self.get_n_selected_SBs()} were selected')
 
 
 if __name__ == '__main__':
@@ -588,3 +628,4 @@ if __name__ == '__main__':
                                 custom_SB_filter=None)
     test_sim.run_simulations(obs_dates=[date(year=2023,month=10,day=1),])
     test_sim.write_failed_simulations_to_csvfile(filepath='test_output.csv')
+    test_sim.print_statistics()
