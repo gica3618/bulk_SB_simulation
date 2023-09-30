@@ -421,7 +421,7 @@ class BulkSimulation():
             at_least_1_simulation_ran = False
             for HA,obs_date,array_config in\
                               itertools.product(HAs,obs_dates,array_configs):
-                logging.info(f'considering HA={HA.hour}, config={array_config}')
+                logging.info(f'considering HA={HA.hour}h, config={array_config}')
                 representative_target_elevation = self.get_elevation_at_ALMA_site(
                                                    DEC=representative_coord.dec,HA=HA)
                 if representative_target_elevation < self.min_elevation:
@@ -517,7 +517,7 @@ class BulkSimulation12m(BulkSimulation):
 
     excluded_states = ('FullyObserved','ObservingTimedOut')
 
-    def __init__(self,SB_list,array_config,support_arcs,custom_SB_filter=None,
+    def __init__(self,SB_list,array_config,support_arcs=None,custom_SB_filter=None,
                  HAs=None):
         self.support_arcs = support_arcs
         self.array_config = array_config
@@ -535,8 +535,14 @@ class BulkSimulation12m(BulkSimulation):
         return config_number
 
     def extract_SB_data_to_simulate(self):
-        support_arc_selection = [(sup_arc in self.support_arcs) for sup_arc in
-                                 self.raw_SB_data['support_arc']]
+        if self.support_arcs is not None:
+            logging.info('going to select following support ARCs: '
+                         +str(self.support_arcs))
+            support_arc_selection = [(sup_arc in self.support_arcs) for sup_arc in
+                                     self.raw_SB_data['support_arc']]
+        else:
+            logging.info('no support ARC filtering')
+            support_arc_selection = [True,]*len(self.raw_SB_data['support_arc'])
         state_selection = [(state not in self.excluded_states) for state in
                            self.raw_SB_data['sb_state']]
         config_number = self.get_array_config_number()
@@ -553,7 +559,7 @@ class BulkSimulation12m(BulkSimulation):
         for fieldname in self.SB_data_to_extract:
             self.selected_SBs[fieldname] = list(itertools.compress(
                                            self.raw_SB_data[fieldname],selection))
-        logging.info(f'of {len(selection)} SBs in the list, {selection.sum()}'
+        logging.info(f'of {len(selection)} SBs in the list, {sum(selection)}'
                      +' were selected')
 
 
