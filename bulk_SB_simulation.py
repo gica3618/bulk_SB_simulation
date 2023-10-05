@@ -21,9 +21,9 @@ import sys
     
 
 class OT_XML_File():
-    sbl = 'Alma/ObsPrep/SchedBlock'
-    prj = "Alma/ObsPrep/ObsProject"
-    val = "Alma/ValueTypes"
+    namespaces = {'sbl':'Alma/ObsPrep/SchedBlock',
+                  'prj':"Alma/ObsPrep/ObsProject",
+                  'val':"Alma/ValueTypes"}
     long_lat_keys = {'longitude':'ra','latitude':'dec'}
 
     def __init__(self,filepath,xml_str=None):
@@ -70,7 +70,7 @@ class OT_XML_File():
         return cls(filepath=None,xml_str=xml_str)
 
     def find_unique_element(self,tag):
-        elements = self.root.findall(tag)
+        elements = self.root.findall(tag,namespaces=self.namespaces)
         n_elements = len(elements)
         assert n_elements == 1, f'found {n_elements} matching elements for {tag}'
         return elements[0]
@@ -78,7 +78,7 @@ class OT_XML_File():
     def read_allowed_HA(self):
         allowed_HA = {}
         for key in ('minAllowedHA','maxAllowedHA'):
-            tag = f'{{{self.sbl}}}Preconditions/{{{self.prj}}}{key}'
+            tag = f'sbl:Preconditions/prj:{key}'
             element = self.find_unique_element(tag)
             HA = float(element.text)
             xml_unit = element.attrib['unit']
@@ -95,8 +95,8 @@ class OT_XML_File():
         return allowed_HA
 
     def read_RequiresTPAntenna(self):
-        text = self.root.findtext(f'{{{self.sbl}}}SchedulingConstraints/'+
-                                  f'{{{self.sbl}}}sbRequiresTPAntennas')
+        text = self.root.findtext('sbl:SchedulingConstraints/sbl:sbRequiresTPAntennas',
+                                  namespaces=self.namespaces)
         if text is None:
             return None
         if text == 'true':
@@ -109,19 +109,18 @@ class OT_XML_File():
     def read_coordinates(self,coord_data):
         coord = {}
         for xml_key,output_key in self.long_lat_keys.items():
-            element = coord_data.find(f'{{{self.val}}}{xml_key}')
+            element = coord_data.find(f'val:{xml_key}',namespaces=self.namespaces)
             assert element.attrib['unit'] == 'deg'
             coord[output_key] = float(element.text)
         return SkyCoord(ra=coord['ra']*u.deg,dec=coord['dec']*u.deg)
 
     def get_representative_coordinates(self):
-        tag = f'{{{self.sbl}}}SchedulingConstraints'\
-              +f'/{{{self.sbl}}}representativeCoordinates'
+        tag = 'sbl:SchedulingConstraints/sbl:representativeCoordinates'
         coord_data = self.find_unique_element(tag)
         return self.read_coordinates(coord_data=coord_data)
 
     def read_modeName(self):
-        return self.root.findtext(f'{{{self.sbl}}}modeName')
+        return self.root.findtext('sbl:modeName',namespaces=self.namespaces)
 
     def is_Polarisation(self):
         return self.read_modeName() == 'Polarization Interferometry'
@@ -132,13 +131,25 @@ class OT_XML_File():
     def is_Solar(self):
         return 'Solar' in self.read_modeName()
 
+    def get_FieldSource_names(self):
+        field_sources = self.root.findall("sbl:FieldSource",
+                                          namespaces=self.namespaces)
+        names = [f.find('sbl:name',namespaces=self.namespaces).text for f in
+                 field_sources]
+        return names
+
     def get_PolCal_data(self):
-        tag = f"{{{self.sbl}}}FieldSource[{{{self.sbl}}}name='Polarization']"
+        pol_cal_name_candidates = [n for n in self.get_FieldSource_names() if
+                                   'Polarization' in n]
+        assert len(pol_cal_name_candidates) == 1,\
+                f'unable to uniquely identify Pol cal ({str(pol_cal_name_candidates)})'
+        name = pol_cal_name_candidates[0]
+        tag = f"sbl:FieldSource[sbl:name='{name}']"
         return self.find_unique_element(tag)
         
     def PolCal_is_fixed(self):
         PolCal_data = self.get_PolCal_data()
-        is_query = PolCal_data.findtext(f'{{{self.sbl}}}isQuery')
+        is_query = PolCal_data.findtext('sbl:isQuery',namespaces=self.namespaces)
         if is_query == 'false':
             return True
         elif is_query == 'true':
@@ -148,7 +159,8 @@ class OT_XML_File():
 
     def get_PolCal_coordinates(self):
         PolCal_data = self.get_PolCal_data()
-        coord_data = PolCal_data.find(f'{{{self.sbl}}}sourceCoordinates')
+        coord_data = PolCal_data.find('sbl:sourceCoordinates',
+                                      namespaces=self.namespaces)
         return self.read_coordinates(coord_data=coord_data)
 
 
@@ -178,8 +190,7 @@ class SingleSimulation():
                 logging.info(f'will use cfg file {self.array_config}, copying it'
                              +' to the work folder')
                 shutil.copy(src=self.array_config,dst=self.output_folder)
-        logging.info('going to execute the following command:')
-        logging.info(command)
+        logging.info(f'going to execute the following command:\n{command}')
         os.chdir(self.output_folder)
         output = subprocess.run(command,shell=True,universal_newlines=True,
                                 stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -364,13 +375,6 @@ class BulkSimulation():
             return 'TRANSIT'
         else:
             return f'TRANSIT{HA.hour:+}h'
-            # sign = np.sign(HA.hour)
-            # if sign == 1:
-            #     sign_str = '+'
-            # else:
-            #     assert sign == -1
-            #     sign_str = '-'
-            # return f'TRANSIT{sign_str}{np.abs(HA.hour)}h'
 
     def get_array_configs(self,OT_xml):
         raise NotImplementedError
@@ -415,7 +419,7 @@ class BulkSimulation():
                 else:
                     logging.info('Pol Cal is fixed, as expected')
             HAs = self.get_HAs_to_simulate(OT_xml=OT_xml)
-            logging.info('HAs to simulate: '+str([HA.hour for HA in HAs]))
+            logging.info('HAs to simulate: '+str([f'{HA.hour}h' for HA in HAs]))
             array_configs = self.get_array_configs(OT_xml=OT_xml)
             representative_coord = OT_xml.get_representative_coordinates()
             at_least_1_simulation_ran = False
@@ -443,8 +447,6 @@ class BulkSimulation():
                 if not success:
                     executed_simulation['failed_commands'].append(command)
                     executed_simulation['fail_reasons'].append(fail_reason)
-                    for key in ('SB','sb_state'):
-                        executed_simulation[key] = 'N/A'
                     print(f'simulation failed ({command})')
             if at_least_1_simulation_ran:
                 simulation.delete_output_folder()
@@ -463,9 +465,12 @@ class BulkSimulation():
                   f' {int(guess_remaining_time/60)} min')
 
     def write_failed_simulations_to_csvfile(self,filepath):
+        excluded_output = ['executed_commands']
         fieldnames = list(self.executed_simulations[0].keys())
+        fieldnames = [f for f in fieldnames if f not in excluded_output]
         with open(filepath,'w',newline='') as csvfile:
-            writer = csv.DictWriter(csvfile,fieldnames=fieldnames)
+            writer = csv.DictWriter(csvfile,fieldnames=fieldnames,
+                                    extrasaction='ignore')
             writer.writeheader()
             for sim in self.executed_simulations:
                 if len(sim['failed_commands']) == 0:
@@ -627,11 +632,13 @@ if __name__ == '__main__':
     #     return dat['Project Code'][:4] != '2023'
     # test_sim = BulkSimulation7m(SB_list='../SBs_7m_2023-09-15.csv',
     #                             custom_SB_filter=None)
-
-    #test_xml = OT_XML_File('example_VLBI_2022.1.01268.V.xml')
     
-    test_sim = BulkSimulation7m(SB_list='SBs_7m_test_elevation.csv',
-                                custom_SB_filter=None)
-    test_sim.run_simulations(obs_dates=[date(year=2023,month=10,day=1),])
-    test_sim.write_failed_simulations_to_csvfile(filepath='test_output.csv')
-    test_sim.print_statistics()
+    # test_sim = BulkSimulation7m(SB_list='SBs_7m_test_elevation.csv',
+    #                             custom_SB_filter=None)
+    # test_sim.run_simulations(obs_dates=[date(year=2023,month=10,day=1),])
+    # test_sim.write_failed_simulations_to_csvfile(filepath='test_output.csv')
+    # test_sim.print_statistics()
+    
+    #test_xml = OT_XML_File('../example_xml_files/example_polarisation_2023.1.00013.S.xml')
+    #test_xml = OT_XML_File('../example_xml_files/example_polarisation_2022.1.01477.S.xml')
+    test_xml = OT_XML_File('../example_xml_files/example_cycle10_7m_2023.1.01099.S.xml')
