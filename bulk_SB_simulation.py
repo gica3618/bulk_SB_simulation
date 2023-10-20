@@ -131,6 +131,13 @@ class OT_XML_File():
     def is_Solar(self):
         return 'Solar' in self.read_modeName()
 
+    def get_nominal_config(self):
+        return self.root.findtext('sbl:SchedulingConstraints/sbl:nominalConfiguration',
+                                  namespaces=self.namespaces)
+
+    def is_7m(self):
+        return self.get_nominal_config() == '7M'
+
     def get_FieldSource_names(self):
         field_sources = self.root.findall("sbl:FieldSource",
                                           namespaces=self.namespaces)
@@ -388,13 +395,13 @@ class BulkSimulation():
         return np.arcsin(sin_elevation)
 
     def run_simulations(self,obs_dates):
-        project_codes = self.selected_SBs['code']
-        n_projects = len(project_codes)
+        SB_project_codes = self.selected_SBs['code']
+        n_SBs = len(SB_project_codes)
         self.executed_simulations = []
         execution_times = []
-        for i,code in enumerate(project_codes):
+        for i,code in enumerate(SB_project_codes):
             start = time.time()
-            print(f'simulating SB {i+1}/{n_projects}')
+            print(f'simulating SB {i+1}/{n_SBs}')
             SB = self.selected_SBs['sbname'][i]
             print(f'SB name: {SB} ({code})')
             OT_xml = OT_XML_File.from_download(project_code=code,SB=SB)
@@ -407,13 +414,17 @@ class BulkSimulation():
             executed_simulation = {'project_code':code,'SB':SB,
                                    'p2g':self.selected_SBs['p2g_account'][i],
                                    'sb_state':self.selected_SBs['sb_state'][i],
-                                   'executed_commands':[],
-                                   'failed_commands':[],'fail_reasons':[]}
+                                   'executed_commands_list':[],'successful_simulations_list':[],
+                                   'failed_simulations_list':[],'fail_reasons_list':[]}
+            if OT_xml.is_7m():
+                requires_tp = OT_xml.read_RequiresTPAntenna()
+                assert requires_tp is not None
+                executed_simulation['xml_requires_TP'] = requires_tp 
             if OT_xml.is_Polarisation():
                 if not OT_xml.PolCal_is_fixed():
                     logging.info('Pol Cal is not fixed. Not going to simulate')
-                    executed_simulation['failed_commands'].append('N/A (no simulation)')
-                    executed_simulation['fail_reasons'].append('Pol Cal is not fixed')
+                    executed_simulation['failed_simulations_list'].append('N/A (no simulation)')
+                    executed_simulation['fail_reasons_list'].append('Pol Cal is not fixed')
                     self.executed_simulations.append(executed_simulation)
                     continue
                 else:
@@ -442,70 +453,67 @@ class BulkSimulation():
                 simulation = SingleSimulation(project_code=code,SB=SB,epoch=epoch,
                                               array_config=array_config)
                 command,success,fail_reason = simulation.run()
-                executed_simulation['executed_commands'].append(command)
+                executed_simulation['executed_commands_list'].append(command)
                 at_least_1_simulation_ran = True
-                if not success:
-                    executed_simulation['failed_commands'].append(command)
-                    executed_simulation['fail_reasons'].append(fail_reason)
+                if success:
+                    executed_simulation['successful_simulations_list'].append(command)
+                else:
+                    executed_simulation['failed_simulations_list'].append(command)
+                    executed_simulation['fail_reasons_list'].append(fail_reason)
                     print(f'simulation failed ({command})')
             if at_least_1_simulation_ran:
                 simulation.delete_output_folder()
             else:
                 logging.warn('All simulations for {code} were skipped')
-                executed_simulation['failed_commands'].append('None')
-                executed_simulation['fail_reasons'].append(
+                executed_simulation['failed_simulations_list'].append('None')
+                executed_simulation['fail_reasons_list'].append(
                                   'All simulations skipped, please investigate')
             self.executed_simulations.append(executed_simulation)
             end = time.time()
             execution_times.append(end-start)
             mean_execution_time = np.mean(execution_times)
-            n_remaining_projects = n_projects-i-1
+            n_remaining_projects = n_SBs-i-1
             guess_remaining_time = n_remaining_projects*mean_execution_time
             print(f'remaining time for the {n_remaining_projects} remaining projects:'+
                   f' {int(guess_remaining_time/60)} min')
+        #need to do the following outside of the loop (e.g. for case that do not do
+        #the whole loop, such as no fixed PolCal)
+        for i in range(len(self.executed_simulations)):
+            updated_sim = self.executed_simulations[i].copy()
+            for key in ('executed_commands_list','successful_simulations_list',
+                        'failed_simulations_list','fail_reasons_list'):
+                updated_sim[key[:-5]] = '\n'.join(updated_sim[key])
+            self.executed_simulations[i] = updated_sim
+        self.executed_simulations = sorted(self.executed_simulations,
+                                           key=lambda sim: sim['project_code'])
 
     def write_failed_simulations_to_csvfile(self,filepath):
-        excluded_output = ['executed_commands']
-        fieldnames = list(self.executed_simulations[0].keys())
-        fieldnames = [f for f in fieldnames if f not in excluded_output]
+        fieldnames = ['project_code','SB','p2g', 'sb_state','failed_simulations',
+                      'fail_reasons']
         with open(filepath,'w',newline='') as csvfile:
             writer = csv.DictWriter(csvfile,fieldnames=fieldnames,
                                     extrasaction='ignore')
             writer.writeheader()
             for sim in self.executed_simulations:
-                if len(sim['failed_commands']) == 0:
+                if len(sim['failed_simulations_list']) == 0:
                     continue
-                #need to take a copy such that the original sim does not get modified
-                output_sim = sim.copy()
-                for key in ('fail_reasons','failed_commands'):
-                    output_sim[key] = '\n'.join(output_sim[key])
-                writer.writerow(output_sim)
+                writer.writerow(sim)
         print(f'wrote failed simulations to {filepath}')
 
-    def print_statistics(self):
-        #TODO test this
+    def write_statistics(self,filepath):
         simulations_with_failure = [sim for sim in self.executed_simulations
-                                    if len(sim['failed_commands'])>0]
+                                    if len(sim['failed_simulations_list'])>0]
         failed_project_codes = [sim['project_code'] for sim in
                                 simulations_with_failure]
         failed_project_codes = set(failed_project_codes)
         all_project_codes = set(self.selected_SBs['code'])
-        print(f'total number of projects: {len(all_project_codes)}')
-        print('number of projects with at least one failed simulation: '+
-              f'{len(failed_project_codes)}')
-        print(f'total number of SBs: {self.get_n_selected_SBs()}')
-        print(f'total number of SBs simulated: {len(self.executed_simulations)}')
-        print('number of SBs with at least one failed simulation: '+
-              f'{len(simulations_with_failure)}')
-        n_simulations = sum([len(sim['executed_commands']) for sim in
+        n_simulations = sum([len(sim['executed_commands_list']) for sim in
                              self.executed_simulations])
-        n_failed_simulations = sum([len(sim['failed_commands']) for sim in
+        n_failed_simulations = sum([len(sim['failed_simulations_list']) for sim in
                                     simulations_with_failure])
-        print(f'total number of simulations: {n_simulations}')
-        print(f'total number of failed simulations: {n_failed_simulations}')
         fail_reasons = []
         for sim in simulations_with_failure:
-            fail_reasons += sim['fail_reasons']
+            fail_reasons += sim['fail_reasons_list']
         unique_fail_reasons = set(fail_reasons)
         fail_reason_counts = {fail_reason:fail_reasons.count(fail_reason)
                               for fail_reason in unique_fail_reasons}
@@ -513,9 +521,21 @@ class BulkSimulation():
         fail_reason_counts = {fail_reason:count for fail_reason,count in
                               sorted(fail_reason_counts.items(),
                                      key=lambda item:-item[1])}
-        print('fail reason counts:')
-        for fail_reason,count in fail_reason_counts.items():
-            print(f'- "{fail_reason}": {count}')
+        with open(filepath, "w") as file:
+            file.write(f'total number of projects: {len(all_project_codes)}\n')
+            file.write('number of projects with at least one failed simulation: '+
+                       f'{len(failed_project_codes)}\n')
+            file.write(f'total number of SBs: {self.get_n_selected_SBs()}\n')
+            file.write('total number of SBs simulated: '
+                       +f'{len(self.executed_simulations)}\n')
+            file.write('number of SBs with at least one failed simulation: '+
+                       f'{len(simulations_with_failure)}\n')
+            file.write(f'total number of simulations: {n_simulations}\n')
+            file.write(f'total number of failed simulations: {n_failed_simulations}\n')
+            file.write('fail reason counts:\n')
+            for fail_reason,count in fail_reason_counts.items():
+                file.write(f'- "{fail_reason}": {count}\n')
+        logging.info(f'wrote statistics to {filepath}')
 
 
 class BulkSimulation12m(BulkSimulation):
@@ -610,6 +630,75 @@ class BulkSimulation7m(BulkSimulation):
                      +f'{self.get_n_selected_SBs()} were selected')
 
 
+class BulkSimulation7m_checkTP(BulkSimulation7m):
+
+    '''To check which SBs need TP'''
+
+    def __init__(self,SB_list,custom_SB_filter=None):
+        BulkSimulation7m.__init__(self,SB_list=SB_list,
+                                  array_configs=['aca.cm10.pm3.cfg','7m'],
+                                  HAs=[-1,],custom_SB_filter=custom_SB_filter)
+
+    def write_needsTP_to_csvfile(self,filepath):
+        fieldnames = ['project_code','SB','p2g','sb_state','failed_simulations',
+                      'fail_reasons','successful_simulations',
+                      'needs TP (current setting)','needs TP (recommended setting)',
+                      'P2G action']
+        logging.info('assessing need of TP')
+        with open(filepath,'w',newline='') as csvfile:
+            writer = csv.DictWriter(csvfile,fieldnames=fieldnames,
+                                    extrasaction='ignore')
+            writer.writeheader()
+            config7m_ID = '-C 7m'
+            configTP_ID = '-C aca.cm10.pm3.cfg'
+            for sim in self.executed_simulations:
+                logging.info(f'{sim["SB"]} ({sim["project_code"]})')
+                #need to take a copy such that the original sim does not get modified
+                output_sim = sim.copy()
+                output_sim['needs TP (current setting)'] = sim['xml_requires_TP']
+                if len(sim['executed_commands_list']) == 0:
+                    needs_TP = 'unknown'
+                else:
+                    assert len(sim['executed_commands_list']) == 2
+                if len(sim['successful_simulations_list']) == 2:
+                    logging.info('both simulations successful, no need for TP')
+                    needs_TP = False
+                elif len(sim['successful_simulations_list']) == 0:
+                    logging.info('both simulations failed, not possible to determine'+
+                                 ' if TP is needed')
+                    needs_TP = 'unknown'
+                else:
+                    assert len(sim['successful_simulations_list'])\
+                                  == len(sim['failed_simulations_list']) == 1
+                    successful_sim = sim['successful_simulations_list'][0]
+                    failed_sim = sim['failed_simulations_list'][0]
+                    if config7m_ID in successful_sim:
+                        #TODO check with Yu-Ting/Hugo if this is right, i.e.
+                        #could we say here that TP is not needed?
+                        assert configTP_ID in failed_sim
+                        logging.info('7m success, 7m+TP failed. No possible to determine'
+                                     +'if TP is needed')
+                        needs_TP = 'unknown'
+                    elif configTP_ID in successful_sim:
+                        assert config7m_ID in failed_sim
+                        logging.info('7m+TP success, 7m failed. This needs TP.')
+                        needs_TP = True
+                output_sim['needs TP (recommended setting)'] = needs_TP
+                #be careful here; can't simple say "if needs_TP:", because needs_TP
+                #can be 'unknown'
+                if needs_TP == True and not output_sim['needs TP (current setting)']:
+                    logging.info('P2G need to activate TP')
+                    output_sim['P2G action'] = 'activate TP'
+                if needs_TP == False and output_sim['needs TP (current setting)']:
+                    logging.info('P2G need to de-activate TP')
+                    output_sim['P2G action'] = 'deactivate TP'
+                else:
+                    logging.info('no P2G action')
+                    output_sim['P2G action'] = ''
+                writer.writerow(output_sim)
+        print(f'wrote TP assessment to {filepath}')
+
+
 if __name__ == '__main__':
     from datetime import date
     logging.basicConfig(format='%(levelname)s: %(message)s',level=logging.INFO,
@@ -640,5 +729,5 @@ if __name__ == '__main__':
     # test_sim.print_statistics()
     
     #test_xml = OT_XML_File('../example_xml_files/example_polarisation_2023.1.00013.S.xml')
-    #test_xml = OT_XML_File('../example_xml_files/example_polarisation_2022.1.01477.S.xml')
-    test_xml = OT_XML_File('../example_xml_files/example_cycle10_7m_2023.1.01099.S.xml')
+    test_xml = OT_XML_File('../example_xml_files/example_polarisation_2022.1.01477.S.xml')
+    #test_xml = OT_XML_File('../example_xml_files/example_cycle10_7m_2023.1.01099.S.xml')
