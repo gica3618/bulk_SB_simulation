@@ -18,6 +18,7 @@ import logging
 from astropy import units as u
 from astropy.coordinates import Angle,SkyCoord
 import sys
+import datetime
     
 
 class OT_XML_File():
@@ -173,11 +174,16 @@ class OT_XML_File():
 
 class SingleSimulation():
 
-    def __init__(self,project_code,SB,epoch,array_config):
+    def __init__(self,project_code,SB,epoch,array_config,log_storage_folder):
         self.project_code = project_code
         self.SB = SB
         self.epoch = epoch
         self.array_config = array_config
+        self.log_storage_folder = log_storage_folder
+        self.original_log_file_name = f'log_{self.project_code}_{self.SB}.xml_OSS.txt'
+        epoch_str = self.epoch.replace(',','_')
+        self.storage_log_file_name = f'log_{self.project_code}_{self.SB}_{epoch_str}'\
+                                      +f'_array_{self.array_config}.txt'
         self.parent_directory = os.getcwd()
         self.output_folder = os.path.join(self.parent_directory,
                                           f'simulation_output_{project_code}_{SB}')
@@ -201,6 +207,10 @@ class SingleSimulation():
         os.chdir(self.output_folder)
         output = subprocess.run(command,shell=True,universal_newlines=True,
                                 stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        if os.path.isfile(self.original_log_file_name):
+            new_filepath = os.path.join(self.log_storage_folder,
+                                        self.storage_log_file_name)
+            shutil.move(src=self.original_log_file_name,dst=new_filepath)
         pipe = {'stdout':output.stdout,'stderr':output.stderr}
         loggers = {'stdout':logging.info,'stderr':logging.error}
         for key,logger in loggers.items():
@@ -268,7 +278,7 @@ class SingleSimulation():
 
 class BulkSimulation():
 
-    SB_data_to_extract = ('code','sbname','p2g_account','sb_state',
+    SB_data_to_extract = ('code','sbname','p2g_account','sb_state','',
                           'dc_letter_grade')
     ALMA_site_latitude = np.radians(-23.029)
     min_elevation = np.radians(20)
@@ -278,8 +288,15 @@ class BulkSimulation():
         self.SB_list = SB_list
         self.custom_SB_filter = custom_SB_filter
         self.HAs = HAs
+        now = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+        self.log_storage_folder = os.path.join(os.getcwd(),f'log_files_{now}')
+        self.create_log_storage_folder()
         self.read_SB_list()
         self.extract_SB_data_to_simulate()
+
+    def create_log_storage_folder(self):
+        logging.info(f'going to create {self.log_storage_folder}')
+        os.mkdir(self.log_storage_folder)
 
     def read_SB_list(self):
         with open(self.SB_list,mode='r') as csv_file:
@@ -414,7 +431,8 @@ class BulkSimulation():
             executed_simulation = {'project_code':code,'SB':SB,
                                    'p2g':self.selected_SBs['p2g_account'][i],
                                    'sb_state':self.selected_SBs['sb_state'][i],
-                                   'executed_commands_list':[],'successful_simulations_list':[],
+                                   'executed_commands_list':[],'epochs':[],
+                                   'successful_simulations_list':[],
                                    'failed_simulations_list':[],'fail_reasons_list':[]}
             if OT_xml.is_7m():
                 requires_tp = OT_xml.read_RequiresTPAntenna()
@@ -451,9 +469,11 @@ class BulkSimulation():
                 epoch = f'{HA_str},{obs_date.isoformat()}'
                 logging.info(f'simulating with epoch={epoch}')
                 simulation = SingleSimulation(project_code=code,SB=SB,epoch=epoch,
-                                              array_config=array_config)
+                                              array_config=array_config,
+                                              log_storage_folder=self.log_storage_folder)
                 command,success,fail_reason = simulation.run()
                 executed_simulation['executed_commands_list'].append(command)
+                executed_simulation['epochs'].append(epoch)
                 at_least_1_simulation_ran = True
                 if success:
                     executed_simulation['successful_simulations_list'].append(command)
@@ -626,70 +646,160 @@ class BulkSimulation7m(BulkSimulation):
         for key,PT_key in self.project_tracker_fieldnames.items():
             self.selected_SBs[key] = list(itertools.compress(
                                          self.raw_SB_data[PT_key],custom_selection))
+        #PT includes the substates, so let's add it to the state:
+        sub_states = list(itertools.compress(
+                                     self.raw_SB_data['SubState'],custom_selection))
+        self.selected_SBs['sb_state'] = [state+substate for state,substate in
+                                         zip(self.selected_SBs['sb_state'],sub_states)]
         logging.info(f'of {len(custom_selection)} SBs in the list, '
                      +f'{self.get_n_selected_SBs()} were selected')
 
 
-class BulkSimulation7m_checkTP(BulkSimulation7m):
+class CheckTP_for_7m_SBs():
 
-    '''To check which SBs need TP'''
+    '''Check which SBs need TP'''
+    config7m_ID = '-C 7m'
+    configTP_ID = '-C aca.cm10.pm3.cfg'
 
-    def __init__(self,SB_list,custom_SB_filter=None):
-        BulkSimulation7m.__init__(self,SB_list=SB_list,
-                                  array_configs=['aca.cm10.pm3.cfg','7m'],
-                                  HAs=[-1,],custom_SB_filter=custom_SB_filter)
+    def __init__(self,SB_list,obs_date,custom_SB_filter=None):
+        self.SB_list = SB_list
+        self.obs_date = obs_date
+        self.custom_SB_filter = custom_SB_filter
+        self.array_configs = ['aca.cm10.pm3.cfg','7m']
 
+    def check_TP(self,check_results_filepath):
+        self.general_sim = BulkSimulation7m(SB_list=self.SB_list,
+                                            array_configs=self.array_configs,
+                                            HAs=[-1,],
+                                            custom_SB_filter=self.custom_SB_filter)
+        self.general_sim.run_simulations(obs_dates=[self.obs_date,])
+        self.general_sim.write_statistics('statistics.txt')
+        self.general_sim.write_failed_simulations_to_csvfile(
+                                filepath='failed_simulations_7m_forTPcheck.csv')
+        self.run_additional_simulations()
+        self.merge_simulations()
+        self.write_needsTP_to_csvfile(filepath=check_results_filepath)
+
+    def get_failed_simulations(self):
+        failed_simulations = []
+        for sim in self.general_sim.executed_simulations:
+            if len(sim['failed_simulations_list']) == 2:
+                failed_simulations.append(sim)
+        return failed_simulations
+
+    @staticmethod
+    def get_sim_ID(sim):
+        return '_'.join([sim['project_code'],sim['SB']])
+
+    def run_additional_simulations(self):
+        '''For those SBs that fail, we run all HAs'''
+        failed_simulations = self.get_failed_simulations()
+        self.additional_sim_IDs = [self.get_sim_ID(sim) for sim
+                                   in failed_simulations]
+        logging.info('going to run additional simulations for '+
+                     f'{len(failed_simulations)} SBs')
+        def SB_filter(data):
+            if self.custom_SB_filter is None:
+                custom = True
+            else:
+                custom = self.custom_SB_filter(data)
+            ID = '_'.join([data['Project Code'],data['SB Name']])
+            return (ID in self.additional_sim_IDs) and custom
+        self.additional_sim = BulkSimulation7m(SB_list=self.SB_list,
+                                               array_configs=self.array_configs,
+                                               HAs=None,custom_SB_filter=SB_filter)
+        self.additional_sim.run_simulations(obs_dates=[self.obs_date,])
+
+    def merge_simulations(self):
+        self.executed_simulations = []
+        for sim in self.general_sim.executed_simulations:
+            general_sim_ID = self.get_sim_ID(sim)
+            if general_sim_ID in self.additional_sim_IDs:
+                candidates = [additional_sim for additional_sim in
+                              self.additional_sim.executed_simulations
+                              if self.get_sim_ID(additional_sim)==general_sim_ID]
+                assert len(candidates) == 1
+                self.executed_simulations.append(candidates[0])
+            else:
+                self.executed_simulations.append(sim)
+
+    def check_TP_general_sim(self,general_sim):
+        logging.info(f'checking TP for {general_sim["SB"]} ({general_sim["project_code"]})')
+        if len(general_sim['executed_commands_list']) == 0:
+            return 'unknown'
+        else:
+            assert len(general_sim['executed_commands_list']) == 2
+        if len(general_sim['successful_simulations_list']) == 2:
+            logging.info('both simulations successful, no need for TP')
+            return False
+        elif len(general_sim['successful_simulations_list']) == 0:
+            logging.info('both simulations failed, not possible to determine'+
+                         ' if TP is needed')
+            return 'unknown'
+        else:
+            assert len(general_sim['successful_simulations_list'])\
+                          == len(general_sim['failed_simulations_list']) == 1
+            successful_sim = general_sim['successful_simulations_list'][0]
+            failed_sim = general_sim['failed_simulations_list'][0]
+            if self.config7m_ID in successful_sim:
+                assert self.configTP_ID in failed_sim
+                logging.info('7m success, 7m+TP failed. Unexpected, not possible to determine'
+                             +'if TP is needed')
+                return 'unknown'
+            elif self.configTP_ID in successful_sim:
+                assert self.config7m_ID in failed_sim
+                logging.info('7m+TP success, 7m failed. This needs TP.')
+                return True
+
+    def check_TP_additional_sim(self,additional_sim):
+        considered_epochs = set(additional_sim['epochs'])
+        for epoch in considered_epochs:
+            successful_commands = [command for command in
+                                   additional_sim['successful_simulations_list']
+                                   if epoch in command]
+            assert len(successful_commands) < 2
+            if len(successful_commands) == 2:
+                for config_ID in (self.config7m_ID,self.configTP_ID):
+                    assert config_ID in ''.join(successful_commands)
+                return False
+            elif len(successful_commands) == 1:
+                failed_commands = [command for command in
+                                   additional_sim['failed_simulations_list']
+                                   if epoch in command]
+                assert len(failed_commands) == 1
+                successful_command = successful_commands[0]
+                failed_command = failed_commands[0]
+                if self.config7m_ID in failed_command:
+                    assert self.configTP_ID in successful_command
+                    return True
+        return 'unknown'
+        
     def write_needsTP_to_csvfile(self,filepath):
         fieldnames = ['project_code','SB','p2g','sb_state','failed_simulations',
                       'fail_reasons','successful_simulations',
-                      'needs TP (current setting)','needs TP (recommended setting)',
-                      'P2G action']
+                      'TP requested','TP needed','P2G action']
         logging.info('assessing need of TP')
         with open(filepath,'w',newline='') as csvfile:
             writer = csv.DictWriter(csvfile,fieldnames=fieldnames,
                                     extrasaction='ignore')
             writer.writeheader()
-            config7m_ID = '-C 7m'
-            configTP_ID = '-C aca.cm10.pm3.cfg'
+
             for sim in self.executed_simulations:
-                logging.info(f'{sim["SB"]} ({sim["project_code"]})')
                 #need to take a copy such that the original sim does not get modified
                 output_sim = sim.copy()
-                output_sim['needs TP (current setting)'] = sim['xml_requires_TP']
-                if len(sim['executed_commands_list']) == 0:
-                    needs_TP = 'unknown'
+                output_sim['TP requested'] = sim['xml_requires_TP']
+                sim_ID = self.get_sim_ID(sim)
+                if sim_ID in self.additional_sim_IDs:
+                    needs_TP = self.check_TP_additional_sim(additional_sim=sim)
                 else:
-                    assert len(sim['executed_commands_list']) == 2
-                if len(sim['successful_simulations_list']) == 2:
-                    logging.info('both simulations successful, no need for TP')
-                    needs_TP = False
-                elif len(sim['successful_simulations_list']) == 0:
-                    logging.info('both simulations failed, not possible to determine'+
-                                 ' if TP is needed')
-                    needs_TP = 'unknown'
-                else:
-                    assert len(sim['successful_simulations_list'])\
-                                  == len(sim['failed_simulations_list']) == 1
-                    successful_sim = sim['successful_simulations_list'][0]
-                    failed_sim = sim['failed_simulations_list'][0]
-                    if config7m_ID in successful_sim:
-                        #TODO check with Yu-Ting/Hugo if this is right, i.e.
-                        #could we say here that TP is not needed?
-                        assert configTP_ID in failed_sim
-                        logging.info('7m success, 7m+TP failed. No possible to determine'
-                                     +'if TP is needed')
-                        needs_TP = 'unknown'
-                    elif configTP_ID in successful_sim:
-                        assert config7m_ID in failed_sim
-                        logging.info('7m+TP success, 7m failed. This needs TP.')
-                        needs_TP = True
-                output_sim['needs TP (recommended setting)'] = needs_TP
+                    needs_TP = self.check_TP_general_sim(general_sim=sim)
+                output_sim['TP needed'] = needs_TP
                 #be careful here; can't simple say "if needs_TP:", because needs_TP
                 #can be 'unknown'
-                if needs_TP == True and not output_sim['needs TP (current setting)']:
+                if needs_TP == True and not output_sim['TP requested']:
                     logging.info('P2G need to activate TP')
                     output_sim['P2G action'] = 'activate TP'
-                if needs_TP == False and output_sim['needs TP (current setting)']:
+                if needs_TP == False and output_sim['TP requested']:
                     logging.info('P2G need to de-activate TP')
                     output_sim['P2G action'] = 'deactivate TP'
                 else:
@@ -707,7 +817,7 @@ if __name__ == '__main__':
     # test_xml = OT_XML_File('example_xml_files/example_polarisation_2022.1.01477.S_polRA_5deg_RepRA_355deg.xml')
     # #test_xml = OT_XML_File('example_xml_files/example_polarisation_2022.1.01477.S_polRA_356deg_RepRA_5deg.xml')
     # test_sim = BulkSimulation12m(SB_list='lookup_table_for_test.csv',
-    #                              support_arcs=['EA',],array_config='c43-9')
+    #                               support_arcs=['EA',],array_config='c43-9')
     # HA_range = test_sim.determine_min_max_HA_to_simulate(OT_xml=test_xml)
     # print(HA_range)
 
@@ -717,10 +827,8 @@ if __name__ == '__main__':
     #                               support_arcs=['EA',],array_config='c43-9',
     #                               custom_SB_filter=custom_filter)
 
-    # def custom_filter(dat):
-    #     return dat['Project Code'][:4] != '2023'
-    # test_sim = BulkSimulation7m(SB_list='../SBs_7m_2023-09-15.csv',
-    #                             custom_SB_filter=None)
+    test_sim = BulkSimulation7m(SB_list='../7m_SBs_2023-10-16.csv',
+                                custom_SB_filter=None)
     
     # test_sim = BulkSimulation7m(SB_list='SBs_7m_test_elevation.csv',
     #                             custom_SB_filter=None)
@@ -729,5 +837,5 @@ if __name__ == '__main__':
     # test_sim.print_statistics()
     
     #test_xml = OT_XML_File('../example_xml_files/example_polarisation_2023.1.00013.S.xml')
-    test_xml = OT_XML_File('../example_xml_files/example_polarisation_2022.1.01477.S.xml')
+    #test_xml = OT_XML_File('../example_xml_files/example_polarisation_2022.1.01477.S.xml')
     #test_xml = OT_XML_File('../example_xml_files/example_cycle10_7m_2023.1.01099.S.xml')

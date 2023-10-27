@@ -38,14 +38,9 @@ logging.basicConfig(format='%(levelname)s: %(message)s',level=logging_level,
 # project_code = '2023.1.00037.S'
 # def custom_filter_7m(data):
 #     return data['Project Code'] == project_code
-sim7m = bulk_SB_simulation.BulkSimulation7m_checkTP(SB_list='7m_SBs_2023-10-16.csv',
-                                                    #custom_SB_filter=custom_filter_7m
-                                                    )
-sim7m.run_simulations(obs_dates=[date.today(),])
-sim7m.write_statistics('statistics.txt')
-sim7m.write_failed_simulations_to_csvfile(
-                filepath='failed_simulations_7m_forTPcheck.csv')
-sim7m.write_needsTP_to_csvfile(filepath='7m_needs_TP.csv')
+check_TP = bulk_SB_simulation.CheckTP_for_7m_SBs(SB_list='7m_SBs_2023-10-23.csv',
+                                                 obs_date=date.today())
+check_TP.check_TP(check_results_filepath='7m_needs_TP.csv')
 
 #simulate specific 7m project
 # obs_dates = [date.today(),]
