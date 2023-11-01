@@ -678,6 +678,7 @@ class CheckTP_for_7m_SBs():
                                 filepath='failed_simulations_7m_forTPcheck.csv')
         self.run_additional_simulations()
         self.merge_simulations()
+        self.determine_if_TP_is_needed()
         self.write_needsTP_to_csvfile(filepath=check_results_filepath)
 
     def get_failed_simulations(self):
@@ -753,15 +754,16 @@ class CheckTP_for_7m_SBs():
 
     def check_TP_additional_sim(self,additional_sim):
         considered_epochs = set(additional_sim['epochs'])
+        needs_TP_per_epoch = []
         for epoch in considered_epochs:
             successful_commands = [command for command in
                                    additional_sim['successful_simulations_list']
                                    if epoch in command]
-            assert len(successful_commands) < 2
+            assert len(successful_commands) <= 2
             if len(successful_commands) == 2:
                 for config_ID in (self.config7m_ID,self.configTP_ID):
                     assert config_ID in ''.join(successful_commands)
-                return False
+                needs_TP_per_epoch.append(False)
             elif len(successful_commands) == 1:
                 failed_commands = [command for command in
                                    additional_sim['failed_simulations_list']
@@ -771,9 +773,38 @@ class CheckTP_for_7m_SBs():
                 failed_command = failed_commands[0]
                 if self.config7m_ID in failed_command:
                     assert self.configTP_ID in successful_command
-                    return True
-        return 'unknown'
-        
+                    needs_TP_per_epoch.append(True)
+                else:
+                    needs_TP_per_epoch.append('unknown')
+            else:
+                needs_TP_per_epoch.append('unknown')
+        if True in needs_TP_per_epoch and False not in needs_TP_per_epoch:
+            #at least for one epoch, it is True, and others are unknown
+            return True
+        elif False in needs_TP_per_epoch and True not in needs_TP_per_epoch:
+            #at least for one epoch if False, and others are unknown
+            return False
+        else:
+            #all entries unknown, or both True and False are present
+            assert (True in needs_TP_per_epoch and False in needs_TP_per_epoch)\
+                  or (True not in needs_TP_per_epoch and False not in needs_TP_per_epoch)
+            return 'unknown'
+
+    def determine_if_TP_is_needed(self):
+        updated_simulations = []
+        for sim in self.executed_simulations:
+            #need to take a copy such that the original sim does not get modified
+            output_sim = sim.copy()
+            output_sim['TP requested'] = sim['xml_requires_TP']
+            sim_ID = self.get_sim_ID(sim)
+            if sim_ID in self.additional_sim_IDs:
+                needs_TP = self.check_TP_additional_sim(additional_sim=sim)
+            else:
+                needs_TP = self.check_TP_general_sim(general_sim=sim)
+            output_sim['TP needed'] = needs_TP
+            updated_simulations.append(output_sim)
+        self.executed_simulations = updated_simulations
+
     def write_needsTP_to_csvfile(self,filepath):
         fieldnames = ['project_code','SB','p2g','sb_state','failed_simulations',
                       'fail_reasons','successful_simulations',
@@ -783,30 +814,32 @@ class CheckTP_for_7m_SBs():
             writer = csv.DictWriter(csvfile,fieldnames=fieldnames,
                                     extrasaction='ignore')
             writer.writeheader()
-
             for sim in self.executed_simulations:
                 #need to take a copy such that the original sim does not get modified
                 output_sim = sim.copy()
-                output_sim['TP requested'] = sim['xml_requires_TP']
-                sim_ID = self.get_sim_ID(sim)
-                if sim_ID in self.additional_sim_IDs:
-                    needs_TP = self.check_TP_additional_sim(additional_sim=sim)
-                else:
-                    needs_TP = self.check_TP_general_sim(general_sim=sim)
-                output_sim['TP needed'] = needs_TP
-                #be careful here; can't simple say "if needs_TP:", because needs_TP
+                #be careful here; can't simple say "if sim['TP needed']", because sim['TP needed']
                 #can be 'unknown'
-                if needs_TP == True and not output_sim['TP requested']:
+                if sim['TP needed'] == True and not sim['TP requested']:
                     logging.info('P2G need to activate TP')
                     output_sim['P2G action'] = 'activate TP'
-                if needs_TP == False and output_sim['TP requested']:
-                    logging.info('P2G need to de-activate TP')
+                if sim['TP needed'] == False and sim['TP requested']:
+                    logging.info('P2G need to deactivate TP')
                     output_sim['P2G action'] = 'deactivate TP'
                 else:
                     logging.info('no P2G action')
                     output_sim['P2G action'] = ''
                 writer.writerow(output_sim)
         print(f'wrote TP assessment to {filepath}')
+
+    def write_needsTP_statistics(self,filepath):
+        all_needs_TP = [sim['TP needed'] for sim in self.executed_simulations]
+        with open(filepath,"w") as file:
+            file.write(f'total number of SBs: {len(all_needs_TP)}\n')
+            file.write('needs TP:\n')
+            for value in (True,False,'unknown'):
+                n_entries = all_needs_TP.count(value)
+                file.write(f'{value}: {n_entries}\n')
+        logging.info(f'wrote statistics for needs_TP to {filepath}')
 
 
 if __name__ == '__main__':
