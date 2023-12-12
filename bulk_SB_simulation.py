@@ -278,7 +278,7 @@ class SingleSimulation():
 
 class BulkSimulation():
 
-    SB_data_to_extract = ('code','sbname','p2g_account','sb_state','',
+    SB_data_to_extract = ('code','sbname','p2g_account','sb_state',
                           'dc_letter_grade')
     ALMA_site_latitude = np.radians(-23.029)
     min_elevation = np.radians(20)
@@ -679,6 +679,7 @@ class CheckTP_for_7m_SBs():
         self.run_additional_simulations()
         self.merge_simulations()
         self.determine_if_TP_is_needed()
+        self.sort_executed_simulations()
         self.write_needsTP_to_csvfile(filepath=check_results_filepath)
 
     def get_failed_simulations(self):
@@ -792,6 +793,7 @@ class CheckTP_for_7m_SBs():
 
     def determine_if_TP_is_needed(self):
         updated_simulations = []
+        logging.info('determining if TP is needed')
         for sim in self.executed_simulations:
             #need to take a copy such that the original sim does not get modified
             output_sim = sim.copy()
@@ -802,33 +804,37 @@ class CheckTP_for_7m_SBs():
             else:
                 needs_TP = self.check_TP_general_sim(general_sim=sim)
             output_sim['TP needed'] = needs_TP
+            #be careful here; can't simple say "if sim['TP needed']", because sim['TP needed']
+            #can be 'unknown'
+            if output_sim['TP needed'] == True and not output_sim['TP requested']:
+                output_sim['P2G action'] = 'activate TP'
+            if output_sim['TP needed'] == False and output_sim['TP requested']:
+                output_sim['P2G action'] = 'deactivate TP'
+            else:
+                output_sim['P2G action'] = ''
             updated_simulations.append(output_sim)
         self.executed_simulations = updated_simulations
+
+    def sort_executed_simulations(self):
+        p2g_action = []
+        no_action = []
+        for sim in self.executed_simulations:
+            no_action.append(sim) if sim['P2G action']=='' else p2g_action.append(sim)
+        sort_key = lambda sim: sim['project_code']
+        p2g_action.sort(key=sort_key)
+        no_action.sort(key=sort_key)
+        self.executed_simulations = p2g_action + no_action
 
     def write_needsTP_to_csvfile(self,filepath):
         fieldnames = ['project_code','SB','p2g','sb_state','failed_simulations',
                       'fail_reasons','successful_simulations',
                       'TP requested','TP needed','P2G action']
-        logging.info('assessing need of TP')
         with open(filepath,'w',newline='') as csvfile:
             writer = csv.DictWriter(csvfile,fieldnames=fieldnames,
                                     extrasaction='ignore')
             writer.writeheader()
             for sim in self.executed_simulations:
-                #need to take a copy such that the original sim does not get modified
-                output_sim = sim.copy()
-                #be careful here; can't simple say "if sim['TP needed']", because sim['TP needed']
-                #can be 'unknown'
-                if sim['TP needed'] == True and not sim['TP requested']:
-                    logging.info('P2G need to activate TP')
-                    output_sim['P2G action'] = 'activate TP'
-                if sim['TP needed'] == False and sim['TP requested']:
-                    logging.info('P2G need to deactivate TP')
-                    output_sim['P2G action'] = 'deactivate TP'
-                else:
-                    logging.info('no P2G action')
-                    output_sim['P2G action'] = ''
-                writer.writerow(output_sim)
+                writer.writerow(sim)
         print(f'wrote TP assessment to {filepath}')
 
     def write_needsTP_statistics(self,filepath):
@@ -860,8 +866,8 @@ if __name__ == '__main__':
     #                               support_arcs=['EA',],array_config='c43-9',
     #                               custom_SB_filter=custom_filter)
 
-    test_sim = BulkSimulation7m(SB_list='../7m_SBs_2023-10-16.csv',
-                                custom_SB_filter=None)
+    # test_sim = BulkSimulation7m(SB_list='../7m_SBs_2023-10-16.csv',
+    #                             custom_SB_filter=None)
     
     # test_sim = BulkSimulation7m(SB_list='SBs_7m_test_elevation.csv',
     #                             custom_SB_filter=None)

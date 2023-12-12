@@ -19,13 +19,17 @@ logging.basicConfig(format='%(levelname)s: %(message)s',level=logging_level,
                     stream=sys.stdout)
 
 #12m SBs
-# obs_dates = [date.today(),date(year=2023,month=10,day=20)]
-# sim12m = bulk_SB_simulation.BulkSimulation12m(
-#                           SB_list='12m_SBs_2023-10-05.csv',
-#                           support_arcs=None,array_config='c43-8')
-# sim12m.run_simulations(obs_dates=obs_dates)
-# sim12m.write_failed_simulations_to_csvfile(filepath='failed_simulations_12m.csv')
-# sim12m.write_statistics('statistics.txt')
+def project_selector(data):
+    return data['code'] == '2023.1.00740.S' and data['sbname'] == 'NGC526a_a_05_TM1'
+array_config = 'c43-6'
+obs_dates = [date.today(),date(year=2023,month=12,day=21)]
+sim12m = bulk_SB_simulation.BulkSimulation12m(
+                          SB_list='12m_SBs_2023-11-30.csv',
+                          support_arcs=None,array_config=array_config,
+                          custom_SB_filter=project_selector)
+sim12m.run_simulations(obs_dates=obs_dates)
+sim12m.write_failed_simulations_to_csvfile(filepath=f'failed_simulations_12m_{array_config}.csv')
+sim12m.write_statistics(f'statistics_{array_config}.txt')
 
 #7m SBs
 # obs_dates = [date.today(),]
@@ -38,10 +42,10 @@ logging.basicConfig(format='%(levelname)s: %(message)s',level=logging_level,
 # project_code = '2023.1.00037.S'
 # def custom_filter_7m(data):
 #     return data['Project Code'] == project_code
-check_TP = bulk_SB_simulation.CheckTP_for_7m_SBs(SB_list='7m_SBs_2023-10-16_test_short.csv',
-                                                 obs_date=date.today())
-check_TP.check_TP(check_results_filepath='7m_needs_TP.csv')
-check_TP.write_needsTP_statistics(filepath='needsTP_statistics.txt')
+# check_TP = bulk_SB_simulation.CheckTP_for_7m_SBs(SB_list='7m_SBs_2023-11-02.csv',
+#                                                  obs_date=date.today())
+# check_TP.check_TP(check_results_filepath='7m_needs_TP.csv')
+# check_TP.write_needsTP_statistics(filepath='needsTP_statistics.txt')
 
 #simulate specific 7m project
 # obs_dates = [date.today(),]
