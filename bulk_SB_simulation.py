@@ -19,7 +19,28 @@ from astropy import units as u
 from astropy.coordinates import Angle,SkyCoord
 import sys
 import datetime
+
+
+class Calibrator():
+
+    calibrator_types = ['Polarization','Bandpass','Phase','Check','Amplitude']
+    calibrator_keywords = {cal:[cal,cal.lower()] for cal in calibrator_types}
     
+    def __init__(self,name,cal_type,xml_data):
+        self.name = name
+        assert cal_type in self.calibrator_types
+        self.cal_type = cal_type
+        self.xml_data = xml_data
+        
+    def is_query(self):
+        is_query = self.xml_data.findtext('sbl:isQuery',namespaces=OT_XML_File.namespaces)
+        if is_query == 'false':
+            return False
+        elif is_query == 'true':
+            return True
+        else:
+            raise RuntimeError(f'unknown xml value for isQuery: {is_query}')
+
 
 class OT_XML_File():
     namespaces = {'sbl':'Alma/ObsPrep/SchedBlock',
@@ -34,6 +55,7 @@ class OT_XML_File():
             self.root = tree.getroot()
         else:
             self.root = ET.fromstring(xml_str)
+        self.determine_calibrators()
 
     #I took the following method directly from simulateSB.py and simplified it
     @classmethod
@@ -146,27 +168,40 @@ class OT_XML_File():
                  field_sources]
         return names
 
-    def get_PolCal_data(self):
-        pol_cal_name_candidates = [n for n in self.get_FieldSource_names() if
-                                   'Polarization' in n]
-        assert len(pol_cal_name_candidates) == 1,\
-                f'unable to uniquely identify Pol cal ({str(pol_cal_name_candidates)})'
-        name = pol_cal_name_candidates[0]
-        tag = f"sbl:FieldSource[sbl:name='{name}']"
-        return self.find_unique_element(tag)
-        
+    def determine_calibrators(self):
+        calibrators = []
+        field_source_names = self.get_FieldSource_names()
+        for source in field_source_names:
+            candidate_cal_types = []
+            for cal,keywords in Calibrator.calibrator_keywords.items():
+                if any([keyword in source for keyword in keywords]):
+                    candidate_cal_types.append(cal)
+            if len(candidate_cal_types) == 0:
+                logging.info(f'Source {source} is not a calibrator')
+                continue
+            elif len(candidate_cal_types) == 1:
+                cal_type = candidate_cal_types[0]
+                tag = f"sbl:FieldSource[sbl:name='{source}']"
+                cal_elements = self.root.findall(tag,namespaces=self.namespaces)
+                for xml_data in cal_elements:
+                    calibrators.append(Calibrator(name=source,cal_type=cal_type,xml_data=xml_data))
+            else:
+                raise RuntimeError(f'could not uniquely identify cal type of source {source}')
+        self.calibrators = calibrators
+
+    def get_PolCal(self):
+        pol_calibrators = [cal for cal in self.calibrators if
+                           cal.cal_type=='Polarization']
+        assert len(pol_calibrators) == 1
+        return pol_calibrators[0]
+
     def PolCal_is_fixed(self):
-        PolCal_data = self.get_PolCal_data()
-        is_query = PolCal_data.findtext('sbl:isQuery',namespaces=self.namespaces)
-        if is_query == 'false':
-            return True
-        elif is_query == 'true':
-            return False
-        else:
-            raise RuntimeError(f'unknown xml value for isQuery: {is_query}')
+        pol_cal = self.get_PolCal()
+        return (not pol_cal.is_query())
 
     def get_PolCal_coordinates(self):
-        PolCal_data = self.get_PolCal_data()
+        pol_cal = self.get_PolCal()
+        PolCal_data = pol_cal.xml_data
         coord_data = PolCal_data.find('sbl:sourceCoordinates',
                                       namespaces=self.namespaces)
         return self.read_coordinates(coord_data=coord_data)
@@ -174,16 +209,11 @@ class OT_XML_File():
 
 class SingleSimulation():
 
-    def __init__(self,project_code,SB,epoch,array_config,log_storage_folder):
+    def __init__(self,project_code,SB,epoch,array_config):
         self.project_code = project_code
         self.SB = SB
         self.epoch = epoch
         self.array_config = array_config
-        self.log_storage_folder = log_storage_folder
-        self.original_log_file_name = f'log_{self.project_code}_{self.SB}.xml_OSS.txt'
-        epoch_str = self.epoch.replace(',','_')
-        self.storage_log_file_name = f'log_{self.project_code}_{self.SB}_{epoch_str}'\
-                                      +f'_array_{self.array_config}.txt'
         self.parent_directory = os.getcwd()
         self.output_folder = os.path.join(self.parent_directory,
                                           f'simulation_output_{project_code}_{SB}')
@@ -207,10 +237,6 @@ class SingleSimulation():
         os.chdir(self.output_folder)
         output = subprocess.run(command,shell=True,universal_newlines=True,
                                 stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        if os.path.isfile(self.original_log_file_name):
-            new_filepath = os.path.join(self.log_storage_folder,
-                                        self.storage_log_file_name)
-            shutil.move(src=self.original_log_file_name,dst=new_filepath)
         pipe = {'stdout':output.stdout,'stderr':output.stderr}
         loggers = {'stdout':logging.info,'stderr':logging.error}
         for key,logger in loggers.items():
@@ -288,15 +314,8 @@ class BulkSimulation():
         self.SB_list = SB_list
         self.custom_SB_filter = custom_SB_filter
         self.HAs = HAs
-        now = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
-        self.log_storage_folder = os.path.join(os.getcwd(),f'log_files_{now}')
-        self.create_log_storage_folder()
         self.read_SB_list()
         self.extract_SB_data_to_simulate()
-
-    def create_log_storage_folder(self):
-        logging.info(f'going to create {self.log_storage_folder}')
-        os.mkdir(self.log_storage_folder)
 
     def read_SB_list(self):
         with open(self.SB_list,mode='r') as csv_file:
@@ -411,7 +430,7 @@ class BulkSimulation():
               + np.cos(self.ALMA_site_latitude)*np.cos(DEC.rad)*np.cos(HA.rad)
         return np.arcsin(sin_elevation)
 
-    def run_simulations(self,obs_dates):
+    def run_simulations(self,obs_dates,skip_fixed_cal_SBs=False):
         SB_project_codes = self.selected_SBs['code']
         n_SBs = len(SB_project_codes)
         self.executed_simulations = []
@@ -433,20 +452,29 @@ class BulkSimulation():
                                    'sb_state':self.selected_SBs['sb_state'][i],
                                    'executed_commands_list':[],'epochs':[],
                                    'successful_simulations_list':[],
-                                   'failed_simulations_list':[],'fail_reasons_list':[]}
+                                   'failed_simulations_list':[],'fail_reasons_list':[],
+                                   'skip_reason':''}
             if OT_xml.is_7m():
                 requires_tp = OT_xml.read_RequiresTPAntenna()
                 assert requires_tp is not None
-                executed_simulation['xml_requires_TP'] = requires_tp 
+                executed_simulation['xml_requires_TP'] = requires_tp
             if OT_xml.is_Polarisation():
                 if not OT_xml.PolCal_is_fixed():
-                    logging.info('Pol Cal is not fixed. Not going to simulate')
-                    executed_simulation['failed_simulations_list'].append('N/A (no simulation)')
-                    executed_simulation['fail_reasons_list'].append('Pol Cal is not fixed')
+                    logging.info('Polarization Calibrator not fixed. Not going to simulate')
+                    executed_simulation['skip_reason'] = 'Pol Cal not fixed'
                     self.executed_simulations.append(executed_simulation)
                     continue
                 else:
-                    logging.info('Pol Cal is fixed, as expected')
+                    logging.info('Pol Cal fixed, as expected')
+            if skip_fixed_cal_SBs:
+                if any([not cal.is_query() for cal in OT_xml.calibrators]):
+                    fixed_calibrators = [cal.cal_type for cal in OT_xml.calibrators
+                                         if not cal.is_query()]
+                    fixed_calibrators = ','.join(fixed_calibrators)
+                    logging.info(f'Calibrators ({fixed_calibrators}) fixed, not going to simulate')
+                    executed_simulation['skip_reason'] = f'calibrators ({fixed_calibrators}) fixed'
+                    self.executed_simulations.append(executed_simulation)
+                    continue
             HAs = self.get_HAs_to_simulate(OT_xml=OT_xml)
             logging.info('HAs to simulate: '+str([f'{HA.hour}h' for HA in HAs]))
             array_configs = self.get_array_configs(OT_xml=OT_xml)
@@ -469,8 +497,7 @@ class BulkSimulation():
                 epoch = f'{HA_str},{obs_date.isoformat()}'
                 logging.info(f'simulating with epoch={epoch}')
                 simulation = SingleSimulation(project_code=code,SB=SB,epoch=epoch,
-                                              array_config=array_config,
-                                              log_storage_folder=self.log_storage_folder)
+                                              array_config=array_config)
                 command,success,fail_reason = simulation.run()
                 executed_simulation['executed_commands_list'].append(command)
                 executed_simulation['epochs'].append(epoch)
@@ -485,7 +512,7 @@ class BulkSimulation():
                 simulation.delete_output_folder()
             else:
                 logging.warn('All simulations for {code} were skipped')
-                executed_simulation['failed_simulations_list'].append('None')
+                executed_simulation['failed_simulations_list'].append('No simulations were run')
                 executed_simulation['fail_reasons_list'].append(
                                   'All simulations skipped, please investigate')
             self.executed_simulations.append(executed_simulation)
@@ -507,18 +534,36 @@ class BulkSimulation():
         self.executed_simulations = sorted(self.executed_simulations,
                                            key=lambda sim: sim['project_code'])
 
-    def write_failed_simulations_to_csvfile(self,filepath):
+    def write_failed_and_skipped_simulations_to_csvfile(self,filepath):
         fieldnames = ['project_code','SB','p2g', 'sb_state','failed_simulations',
-                      'fail_reasons']
+                      'fail_reasons','skip_reason']
         with open(filepath,'w',newline='') as csvfile:
             writer = csv.DictWriter(csvfile,fieldnames=fieldnames,
                                     extrasaction='ignore')
             writer.writeheader()
             for sim in self.executed_simulations:
-                if len(sim['failed_simulations_list']) == 0:
+                if len(sim['fail_reasons_list']) == 0 and sim['skip_reason'] == '':
                     continue
                 writer.writerow(sim)
-        print(f'wrote failed simulations to {filepath}')
+        print(f'wrote failed and skipped simulations to {filepath}')
+
+    def get_skip_reasons(self):
+        reasons = [sim['skip_reason'] for sim in self.executed_simulations]
+        return [r for r in reasons if r!='']
+
+    def get_fail_rasons(self):
+        reasons = []
+        for sim in self.executed_simulations:
+            reasons += sim['fail_reasons']
+        return reasons
+
+    def get_reason_counts(self,reasons):
+        unique_reasons = set(reasons)
+        reason_counts = {reason:reasons.count(reason) for reason in unique_reasons}
+        #order the dict by the number of counts:
+        reason_counts = {reason:count for reason,count in
+                         sorted(reason_counts.items(),key=lambda item:-item[1])}
+        return reason_counts
 
     def write_statistics(self,filepath):
         simulations_with_failure = [sim for sim in self.executed_simulations
@@ -531,23 +576,21 @@ class BulkSimulation():
                              self.executed_simulations])
         n_failed_simulations = sum([len(sim['failed_simulations_list']) for sim in
                                     simulations_with_failure])
-        fail_reasons = []
-        for sim in simulations_with_failure:
-            fail_reasons += sim['fail_reasons_list']
-        unique_fail_reasons = set(fail_reasons)
-        fail_reason_counts = {fail_reason:fail_reasons.count(fail_reason)
-                              for fail_reason in unique_fail_reasons}
-        #order the dict by the number of counts:
-        fail_reason_counts = {fail_reason:count for fail_reason,count in
-                              sorted(fail_reason_counts.items(),
-                                     key=lambda item:-item[1])}
+        n_skipped_SBs = len([sim for sim in self.executed_simulations
+                             if sim['skip_reason'] != ''])
+        skip_reasons = self.get_skip_reasons()
+        fail_reasons = self.get_fail_rasons()
+        skip_reason_counts = self.get_reason_counts(reasons=skip_reasons)
+        fail_reason_counts = self.get_reason_counts(reasons=fail_reasons)
         with open(filepath, "w") as file:
             file.write(f'total number of projects: {len(all_project_codes)}\n')
             file.write('number of projects with at least one failed simulation: '+
                        f'{len(failed_project_codes)}\n')
             file.write(f'total number of SBs: {self.get_n_selected_SBs()}\n')
-            file.write('total number of SBs simulated: '
+            file.write('total number of SBs considered: '
                        +f'{len(self.executed_simulations)}\n')
+            file.write(f'total number of skipped SBs: {n_skipped_SBs}\n')
+            file.write(f'skip reason counts: {skip_reason_counts}\n')
             file.write('number of SBs with at least one failed simulation: '+
                        f'{len(simulations_with_failure)}\n')
             file.write(f'total number of simulations: {n_simulations}\n')
@@ -668,13 +711,15 @@ class CheckTP_for_7m_SBs():
         self.array_configs = ['aca.cm10.pm3.cfg','7m']
 
     def check_TP(self,check_results_filepath):
-        self.general_sim = BulkSimulation7m(SB_list=self.SB_list,
-                                            array_configs=self.array_configs,
-                                            HAs=[-1,],
-                                            custom_SB_filter=self.custom_SB_filter)
-        self.general_sim.run_simulations(obs_dates=[self.obs_date,])
+        self.general_sim = BulkSimulation7m(
+                              SB_list=self.SB_list,array_configs=self.array_configs,
+                              HAs=[-1,],custom_SB_filter=self.custom_SB_filter)
+        #if any calibrator is fixed, OSS will not determine the SNR of the calibrator
+        #using the antenna configuration
+        #in that case, we cannot determine whether TP is needed or not, so we skip those SBs
+        self.general_sim.run_simulations(obs_dates=[self.obs_date,],skip_fixed_cal_SBs=True)
         self.general_sim.write_statistics('statistics.txt')
-        self.general_sim.write_failed_simulations_to_csvfile(
+        self.general_sim.write_failed_and_skipped_simulations_to_csvfile(
                                 filepath='failed_simulations_7m_forTPcheck.csv')
         self.run_additional_simulations()
         self.merge_simulations()
@@ -685,6 +730,7 @@ class CheckTP_for_7m_SBs():
     def get_failed_simulations(self):
         failed_simulations = []
         for sim in self.general_sim.executed_simulations:
+            #If both with TP and without TP fail, then we do additional simulations
             if len(sim['failed_simulations_list']) == 2:
                 failed_simulations.append(sim)
         return failed_simulations
@@ -696,8 +742,8 @@ class CheckTP_for_7m_SBs():
     def run_additional_simulations(self):
         '''For those SBs that fail, we run all HAs'''
         failed_simulations = self.get_failed_simulations()
-        self.additional_sim_IDs = [self.get_sim_ID(sim) for sim
-                                   in failed_simulations]
+        self.additional_sim_IDs = [self.get_sim_ID(sim) for sim in
+                                   failed_simulations]
         logging.info('going to run additional simulations for '+
                      f'{len(failed_simulations)} SBs')
         def SB_filter(data):
@@ -728,7 +774,7 @@ class CheckTP_for_7m_SBs():
     def check_TP_general_sim(self,general_sim):
         logging.info(f'checking TP for {general_sim["SB"]} ({general_sim["project_code"]})')
         if len(general_sim['executed_commands_list']) == 0:
-            return 'unknown'
+            return 'unable_to_determine'
         else:
             assert len(general_sim['executed_commands_list']) == 2
         if len(general_sim['successful_simulations_list']) == 2:
@@ -737,7 +783,7 @@ class CheckTP_for_7m_SBs():
         elif len(general_sim['successful_simulations_list']) == 0:
             logging.info('both simulations failed, not possible to determine'+
                          ' if TP is needed')
-            return 'unknown'
+            return 'unable_to_determine'
         else:
             assert len(general_sim['successful_simulations_list'])\
                           == len(general_sim['failed_simulations_list']) == 1
@@ -747,7 +793,7 @@ class CheckTP_for_7m_SBs():
                 assert self.configTP_ID in failed_sim
                 logging.info('7m success, 7m+TP failed. Unexpected, not possible to determine'
                              +'if TP is needed')
-                return 'unknown'
+                return 'unable_to_determine'
             elif self.configTP_ID in successful_sim:
                 assert self.config7m_ID in failed_sim
                 logging.info('7m+TP success, 7m failed. This needs TP.')
@@ -776,20 +822,20 @@ class CheckTP_for_7m_SBs():
                     assert self.configTP_ID in successful_command
                     needs_TP_per_epoch.append(True)
                 else:
-                    needs_TP_per_epoch.append('unknown')
+                    needs_TP_per_epoch.append('unable_to_determine')
             else:
-                needs_TP_per_epoch.append('unknown')
+                needs_TP_per_epoch.append('unable_to_determine')
         if True in needs_TP_per_epoch and False not in needs_TP_per_epoch:
-            #at least for one epoch, it is True, and others are unknown
+            #at least for one epoch, it is True, and others are unable_to_determine
             return True
         elif False in needs_TP_per_epoch and True not in needs_TP_per_epoch:
-            #at least for one epoch if False, and others are unknown
+            #at least for one epoch if False, and others are unable_to_determine
             return False
         else:
-            #all entries unknown, or both True and False are present
+            #all entries unable_to_determine, or both True and False are present
             assert (True in needs_TP_per_epoch and False in needs_TP_per_epoch)\
                   or (True not in needs_TP_per_epoch and False not in needs_TP_per_epoch)
-            return 'unknown'
+            return 'unable_to_determine'
 
     def determine_if_TP_is_needed(self):
         updated_simulations = []
@@ -805,7 +851,7 @@ class CheckTP_for_7m_SBs():
                 needs_TP = self.check_TP_general_sim(general_sim=sim)
             output_sim['TP needed'] = needs_TP
             #be careful here; can't simple say "if sim['TP needed']", because sim['TP needed']
-            #can be 'unknown'
+            #can be 'unable_to_determine'
             if output_sim['TP needed'] == True and not output_sim['TP requested']:
                 output_sim['P2G action'] = 'activate TP'
             if output_sim['TP needed'] == False and output_sim['TP requested']:
@@ -827,7 +873,7 @@ class CheckTP_for_7m_SBs():
 
     def write_needsTP_to_csvfile(self,filepath):
         fieldnames = ['project_code','SB','p2g','sb_state','failed_simulations',
-                      'fail_reasons','successful_simulations',
+                      'fail_reasons','skip_reason','successful_simulations',
                       'TP requested','TP needed','P2G action']
         with open(filepath,'w',newline='') as csvfile:
             writer = csv.DictWriter(csvfile,fieldnames=fieldnames,
@@ -842,7 +888,7 @@ class CheckTP_for_7m_SBs():
         with open(filepath,"w") as file:
             file.write(f'total number of SBs: {len(all_needs_TP)}\n')
             file.write('needs TP:\n')
-            for value in (True,False,'unknown'):
+            for value in (True,False,'unable_to_determine'):
                 n_entries = all_needs_TP.count(value)
                 file.write(f'{value}: {n_entries}\n')
         logging.info(f'wrote statistics for needs_TP to {filepath}')
@@ -878,3 +924,6 @@ if __name__ == '__main__':
     #test_xml = OT_XML_File('../example_xml_files/example_polarisation_2023.1.00013.S.xml')
     #test_xml = OT_XML_File('../example_xml_files/example_polarisation_2022.1.01477.S.xml')
     #test_xml = OT_XML_File('../example_xml_files/example_cycle10_7m_2023.1.01099.S.xml')
+    #test_xml = OT_XML_File('../example_xml_files/example_solar_2022.1.01544.S.xml')
+    #test_xml = OT_XML_File('../example_xml_files/example_VLBI_2022.1.01268.V.xml')
+    test_xml = OT_XML_File('../example_xml_files/2023.1.00908.S_IRC+1021_a_07_7M.xml')
