@@ -20,11 +20,12 @@ logging.basicConfig(format='%(levelname)s: %(message)s',level=logging_level,
 
 #12m SBs
 # def project_selector(data):
-#     return data['code'] == '2023.1.00044.S'
-# array_config = 'c43-3'
-# obs_dates = [date.today(),date(year=2024,month=1,day=31)]
+#     return data['code'] == '2018.1.01243.S'
+# array_config = 'c43-1'
+# #obs_dates = [date.today(),date(year=2024,month=1,day=31)]
+# obs_dates = [date(year=2024,month=3,day=1),date(year=2024,month=3,day=26)]
 # sim12m = bulk_SB_simulation.BulkSimulation12m(
-#                           SB_list='12m_SBs_2024-01-15.csv',
+#                           SB_list='12m_SBs_2024-02-21.csv',
 #                           support_arcs=None,array_config=array_config,
 #                           custom_SB_filter=None)
 # sim12m.run_simulations(obs_dates=obs_dates)
@@ -32,19 +33,22 @@ logging.basicConfig(format='%(levelname)s: %(message)s',level=logging_level,
 # sim12m.write_statistics(f'statistics_{array_config}.txt')
 
 #7m SBs
-obs_dates = [date.today(),date(year=2024,month=1,day=31)]
-sim7m = bulk_SB_simulation.BulkSimulation7m(SB_list='7m_SBs_2024-01-15.csv')
-sim7m.run_simulations(obs_dates=obs_dates)
-sim7m.write_failed_and_skipped_simulations_to_csvfile(filepath='failed_simulations_7m.csv')
-sim7m.write_statistics('statistics_7m.txt')
+# def sb_selector(data):
+#     return data['SB Name'] == '1-N166_v_06_7M'
+# obs_dates = [date.today(),]
+# sim7m = bulk_SB_simulation.BulkSimulation7m(SB_list='7m_SBs_2024-02-28.csv',
+#                                             custom_SB_filter=None)
+# sim7m.run_simulations(obs_dates=obs_dates)
+# sim7m.write_failed_and_skipped_simulations_to_csvfile(filepath='failed_simulations_7m.csv')
+# sim7m.write_statistics('statistics_7m.txt')
 
 #check which 7m SBs require TP antennas:
 # def project_selector(data):
 #     return data['Project Code'] == '2023.1.01358.S'
-# check_TP = bulk_SB_simulation.CheckTP_for_7m_SBs(SB_list='7m_SBs_2024-01-09.csv',
-#                                                   obs_date=date.today())
-# check_TP.check_TP(check_results_filepath='7m_needs_TP.csv')
-# check_TP.write_needsTP_statistics(filepath='needsTP_statistics.txt')
+check_TP = bulk_SB_simulation.CheckTP_for_7m_SBs(SB_list='7m_SBs_2024-03-02.csv',
+                                                  obs_date=date.today())
+check_TP.check_TP(check_results_filepath='7m_needs_TP.csv')
+check_TP.write_needsTP_statistics(filepath='needsTP_statistics.txt')
 
 #simulate specific 7m project
 # obs_dates = [date.today(),]

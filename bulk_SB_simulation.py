@@ -18,7 +18,6 @@ import logging
 from astropy import units as u
 from astropy.coordinates import Angle,SkyCoord
 import sys
-import datetime
 
 
 class Calibrator():
@@ -357,12 +356,17 @@ class BulkSimulation():
         #however, P2G can change the allowed HA in the SB, so we need to adjust
         #the HA if necessary:
         allowed_HA = OT_xml.read_allowed_HA()
+        #generally, we expect this to be between -12h and 12h
+        #but sometimes it is between 0 and 24h, which needs to be converted
+        #to avoid rounding errors, do this work in degrees (Angle(180*u.deg).HA gives
+        #12.000000000000002)
+        if allowed_HA['max'].deg > 180:
+            logging.info('converting HA range to be between -12h and 12h')
+            allowed_HA['min'] -= Angle(180*u.deg)
+            allowed_HA['max'] -= Angle(180*u.deg)
         for key,HA in allowed_HA.items():
             error_message = f'need allowed_HA ({key}) to wrap at 12h to be'\
-                             +' comparable to min_HA and max_HA'
-            #because of rounding errors, I need to make the following comparison
-            #in degrees, not in hour... (Angle(180*u.deg).HA gives
-            #12.000000000000002)
+                +f' comparable to min_HA and max_HA, but found HA = {HA.deg} deg'
             assert -180 <= HA.deg <= 180,error_message
         assert allowed_HA['min'] < allowed_HA['max']
         min_HA = Angle(max(min_HA.hour,allowed_HA['min'].hour) * u.hour)
@@ -551,10 +555,10 @@ class BulkSimulation():
         reasons = [sim['skip_reason'] for sim in self.executed_simulations]
         return [r for r in reasons if r!='']
 
-    def get_fail_rasons(self):
+    def get_fail_reasons(self):
         reasons = []
         for sim in self.executed_simulations:
-            reasons += sim['fail_reasons']
+            reasons += sim['fail_reasons_list']
         return reasons
 
     def get_reason_counts(self,reasons):
@@ -579,7 +583,7 @@ class BulkSimulation():
         n_skipped_SBs = len([sim for sim in self.executed_simulations
                              if sim['skip_reason'] != ''])
         skip_reasons = self.get_skip_reasons()
-        fail_reasons = self.get_fail_rasons()
+        fail_reasons = self.get_fail_reasons()
         skip_reason_counts = self.get_reason_counts(reasons=skip_reasons)
         fail_reason_counts = self.get_reason_counts(reasons=fail_reasons)
         with open(filepath, "w") as file:
