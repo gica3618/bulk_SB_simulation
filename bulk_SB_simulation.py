@@ -491,11 +491,11 @@ class BulkSimulation():
                                                    DEC=representative_coord.dec,HA=HA)
                 if representative_target_elevation < self.min_elevation:
                     logging.info('representative target elevation too low, '
-                                 'will not show up in DSA, skipping simulation')
+                                 'will not show up in DSA, skipping this HA')
                     continue
                 if representative_target_elevation > self.max_elevation:
                     logging.info('representative target elevation too high, '
-                                 'will not show up in DSA, skipping simulation')
+                                 'will not show up in DSA, skipping this HA')
                     continue
                 HA_str = self.convert_HA_to_str(HA=HA)
                 epoch = f'{HA_str},{obs_date.isoformat()}'
@@ -714,7 +714,7 @@ class CheckTP_for_7m_SBs():
         self.custom_SB_filter = custom_SB_filter
         self.array_configs = ['aca.cm10.pm3.cfg','7m']
 
-    def check_TP(self,check_results_filepath):
+    def check_TP(self,check_results_filepath,statistics_filepath):
         self.general_sim = BulkSimulation7m(
                               SB_list=self.SB_list,array_configs=self.array_configs,
                               HAs=[-1,],custom_SB_filter=self.custom_SB_filter)
@@ -722,9 +722,9 @@ class CheckTP_for_7m_SBs():
         #using the antenna configuration
         #in that case, we cannot determine whether TP is needed or not, so we skip those SBs
         self.general_sim.run_simulations(obs_dates=[self.obs_date,],skip_fixed_cal_SBs=True)
-        self.general_sim.write_statistics('statistics.txt')
+        self.general_sim.write_statistics(statistics_filepath)
         self.general_sim.write_failed_and_skipped_simulations_to_csvfile(
-                                filepath='failed_simulations_7m_forTPcheck.csv')
+                                filepath='failed_and_skipped_simulations_7m_TPcheck.csv')
         self.run_additional_simulations()
         self.merge_simulations()
         self.determine_if_TP_is_needed()
