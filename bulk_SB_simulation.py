@@ -205,6 +205,9 @@ class OT_XML_File():
                                       namespaces=self.namespaces)
         return self.read_coordinates(coord_data=coord_data)
 
+    def get_NotetoAoD(self):
+        return self.root.findtext('prj:note',namespaces=self.namespaces)
+
 
 class SingleSimulation():
 
@@ -454,6 +457,7 @@ class BulkSimulation():
             executed_simulation = {'project_code':code,'SB':SB,
                                    'p2g':self.selected_SBs['p2g_account'][i],
                                    'sb_state':self.selected_SBs['sb_state'][i],
+                                   'note_to_aod':OT_xml.get_NotetoAoD(),
                                    'executed_commands_list':[],'epochs':[],
                                    'successful_simulations_list':[],
                                    'failed_simulations_list':[],'fail_reasons_list':[],
@@ -487,6 +491,13 @@ class BulkSimulation():
             for HA,obs_date,array_config in\
                               itertools.product(HAs,obs_dates,array_configs):
                 logging.info(f'considering HA={HA.hour}h, config={array_config}')
+                #TODO the following is only checking at one point in time (the considered
+                #HA); but the observations have a finite duration, so sometimes
+                #the elevation is ok at this HA, but not at later HA run during
+                #the simulation. Then the simualtion fails; but DSA should consider
+                #this, so actually the SB is fine (DSA will not schedule (?))
+                #can I detect these cases and skip the corresponding simulations
+                #(e.g. read the simulation log file?)
                 representative_target_elevation = self.get_elevation_at_ALMA_site(
                                                    DEC=representative_coord.dec,HA=HA)
                 if representative_target_elevation < self.min_elevation:
@@ -539,8 +550,8 @@ class BulkSimulation():
                                            key=lambda sim: sim['project_code'])
 
     def write_failed_and_skipped_simulations_to_csvfile(self,filepath):
-        fieldnames = ['project_code','SB','p2g', 'sb_state','failed_simulations',
-                      'fail_reasons','skip_reason']
+        fieldnames = ['project_code','SB','p2g','sb_state','failed_simulations',
+                      'fail_reasons','skip_reason','note_to_aod']
         with open(filepath,'w',newline='') as csvfile:
             writer = csv.DictWriter(csvfile,fieldnames=fieldnames,
                                     extrasaction='ignore')
@@ -930,4 +941,5 @@ if __name__ == '__main__':
     #test_xml = OT_XML_File('../example_xml_files/example_cycle10_7m_2023.1.01099.S.xml')
     #test_xml = OT_XML_File('../example_xml_files/example_solar_2022.1.01544.S.xml')
     #test_xml = OT_XML_File('../example_xml_files/example_VLBI_2022.1.01268.V.xml')
-    test_xml = OT_XML_File('../example_xml_files/2023.1.00908.S_IRC+1021_a_07_7M.xml')
+    #test_xml = OT_XML_File('../example_xml_files/2023.1.00908.S_IRC+1021_a_07_7M.xml')
+    test_xml = OT_XML_File('../example_xml_files/example_NoteToAoD_2023.1.00578.S.xml')
