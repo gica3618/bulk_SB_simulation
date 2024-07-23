@@ -375,6 +375,7 @@ class BulkSimulation():
         min_HA = Angle(max(min_HA.hour,allowed_HA['min'].hour) * u.hour)
         max_HA = Angle(min(max_HA.hour,allowed_HA['max'].hour) * u.hour)
         logging.info(f'HA range after reading xml: {min_HA.hour} h to {max_HA.hour} h')
+        #TODO change -4h to -3h for Polarisation, check with Ignazio
         #for Pol observations, there is an additional condition on the HA:
         #for the first execution of the SB, Pol Cal needs to have HA between -4 and -0.5
         #but we only need to adjust the lower bound (min_HA). The reason is that if

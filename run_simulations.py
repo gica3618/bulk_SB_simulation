@@ -22,11 +22,11 @@ logging.basicConfig(format='%(levelname)s: %(message)s',level=logging_level,
 #12m SBs
 # def project_selector(data):
 #     return data['code'] == '2018.1.01243.S'
-array_config = 'c43-6'
+array_config = 'c43-5'
 #obs_dates = [date.today(),date(year=2024,month=6,day=23)]
-obs_dates = [date(year=2024,month=6,day=23),date(year=2024,month=7,day=27)]
+obs_dates = [date(year=2024,month=7,day=28),date(year=2024,month=8,day=17)]
 sim12m = bulk_SB_simulation.BulkSimulation12m(
-                          SB_list='12m_SBs_2024-06-14.csv',
+                          SB_list='12m_SBs_2024-07-19.csv',
                           support_arcs=None,array_config=array_config,
                           custom_SB_filter=None)
 sim12m.run_simulations(obs_dates=obs_dates)
@@ -36,17 +36,17 @@ sim12m.write_statistics(f'statistics_{array_config}.txt')
 
 '''
 #7m SBs
-# def sb_selector(data):
-#     return data['SB Name'] == '1-N166_v_06_7M'
+def sb_selector(data):
+    return data['SB Name'] == 'HD_16329_a_09_7M'
 obs_dates = [date.today(),]
 sim7m = bulk_SB_simulation.BulkSimulation7m(SB_list='7M_SBs_2024-06-12.csv',
-                                            custom_SB_filter=None)
+                                            custom_SB_filter=sb_selector)
 sim7m.run_simulations(obs_dates=obs_dates)
 sim7m.write_failed_and_skipped_simulations_to_csvfile(
                               filepath='failed_and_skipped_simulations_7m.csv')
 sim7m.write_statistics('statistics_7m.txt')
-'''
 
+'''
 '''
 #check which 7m SBs require TP antennas:
 # def project_selector(data):
