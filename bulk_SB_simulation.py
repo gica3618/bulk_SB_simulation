@@ -8,7 +8,6 @@ Created on Thu Aug 10 09:05:57 2023
 
 import os
 import shutil
-import xml.etree.ElementTree as ET
 import csv
 import itertools
 import numpy as np
@@ -16,227 +15,82 @@ import subprocess
 import time
 import logging
 from astropy import units as u
-from astropy.coordinates import Angle,SkyCoord
+from astropy.coordinates import Angle
 import sys
+import pathlib
+import OT_xml
 
 
-class Calibrator():
+class SimulationResult():
 
-    calibrator_types = ['Polarization','Bandpass','Phase','Check','Amplitude']
-    calibrator_keywords = {cal:[cal,cal.lower()] for cal in calibrator_types}
-    
-    def __init__(self,name,cal_type,xml_data):
-        self.name = name
-        assert cal_type in self.calibrator_types
-        self.cal_type = cal_type
-        self.xml_data = xml_data
+    def __init__(self,executed_command,simulation_output,output_folder,
+                 xml_filename):
+        self.executed_command = executed_command
+        self.output_folder = output_folder
+        self.xml_filename = xml_filename
+        assert self.xml_filename in self.executed_command
+        if simulation_output.returncode != 0:
+            self.success = False
+            pipe = {'stdout':simulation_output.stdout,'stderr':simulation_output.stderr}
+            self.fail_reason = self.identify_fail_reason(pipe=pipe)
+        else:
+            if self.summary_file_reports_success():
+                self.success = True
+                self.fail_reason = None
+            else:
+                self.success = False
+                self.fail_reason = 'summary file does not report success'
         
-    def is_query(self):
-        is_query = self.xml_data.findtext('sbl:isQuery',namespaces=OT_XML_File.namespaces)
-        if is_query == 'false':
-            return False
-        elif is_query == 'true':
-            return True
-        else:
-            raise RuntimeError(f'unknown xml value for isQuery: {is_query}')
+    @staticmethod
+    def identify_fail_reason(pipe):
+        pipe_messages = {key:p.split('\n') for key,p in pipe.items()}
+        pipe_messages = {key:[m for m in messages if m!=''] for key,messages
+                         in pipe_messages.items()}
+        #check messages, starting from the latest
+        msg_iterator = itertools.zip_longest(pipe_messages['stdout'][::-1],
+                                             pipe_messages['stderr'][::-1],
+                                             fillvalue='')
+        max_messages_to_go_back = 5
+        for i,(std_msg,error_msg) in enumerate(msg_iterator):
+            #give preference to error_msg (i.e. check it first):
+            for msg in (error_msg,std_msg):
+                casefolded_msg = msg.casefold()
+                if 'error' in casefolded_msg\
+                                     or 'exception' in casefolded_msg:
+                    logging.info('identified output error message from failed '
+                                 +f'simulation: {msg}')
+                    return msg
+            if i+1 >= max_messages_to_go_back:
+                break
+        logging.info('did not find error message, will take last output'
+                     +' of stdout instead')
+        return pipe['stdout'][-1]
+
+    def summary_file_reports_success(self):
+        summary_filename = f'log_{self.xml_filename}_OSS_summary.txt'
+        filepath = os.path.join(self.output_folder,summary_filename)
+        with open(filepath) as f:
+            contents = f.readlines()
+        return 'SUCCESS' in contents[1]
+
+    def delete_output_folder(self):
+        logging.info(f'going to delete {self.output_folder}')
+        shutil.rmtree(self.output_folder)
 
 
-class OT_XML_File():
-    namespaces = {'sbl':'Alma/ObsPrep/SchedBlock',
-                  'prj':"Alma/ObsPrep/ObsProject",
-                  'val':"Alma/ValueTypes"}
-    long_lat_keys = {'longitude':'ra','latitude':'dec'}
+class SBSimulator():
 
-    def __init__(self,filepath,xml_str=None):
-        if filepath is not None:
-            assert xml_str is None
-            tree = ET.parse(filepath)
-            self.root = tree.getroot()
-        else:
-            self.root = ET.fromstring(xml_str)
-        self.determine_calibrators()
-
-    #I took the following method directly from simulateSB.py and simplified it
-    @classmethod
-    def from_download(cls,project_code,SB):
-        scriptGetSB = "/groups/science/scripts/P2G/getsb/getsb.py"
-        if not os.path.isfile(scriptGetSB):
-            scriptGetSB = "/users/ahirota/AIV/science/scripts/P2G/getsb/getsb.py"
-        try:
-            import cx_Oracle
-            serverName = None
-        except:
-            logging.info("cx_Oracle is not available, and thus will run getsb.py"+
-                         " on red-osf")
-            serverName = "red-osf.osf.alma.cl"
-        if serverName:
-            userName = os.getenv("USER")
-            cmd = ["ssh"]
-            cmd.append(f"{userName}@{serverName}")
-            scriptName = "PYTHONPATH=/users/ahirota/local/lib64/python2.6/"\
-                          +"site-packages/cx_Oracle-5.2.1-py2.6-linux-x86_64.egg"\
-                          +f":$PYTHONPATH {scriptGetSB}"
-            cmd.append(f"{scriptName} -p '{project_code}' -s '{SB}'")
-            cmd.append("-S ora.sco.alma.cl:1521/ONLINE.SCO.CL")
-        else:
-            cmd = [scriptGetSB]
-            cmd.extend(["-p", project_code, "-s", SB])
-            cmd.extend(["-S", "ora.sco.alma.cl:1521/ONLINE.SCO.CL"])
-        logging.info("# Retrieving SB xml with the following command [%s]"\
-                      % (" ".join(cmd)))
-        p = subprocess.Popen(cmd,stdout=subprocess.PIPE,env=None)
-        xml_str, _ = p.communicate()
-        if hasattr(sys.stdout,"detach"):
-            # Py3
-            xml_str = xml_str.decode("utf-8")
-        return cls(filepath=None,xml_str=xml_str)
-
-    def find_unique_element(self,tag):
-        elements = self.root.findall(tag,namespaces=self.namespaces)
-        n_elements = len(elements)
-        assert n_elements == 1, f'found {n_elements} matching elements for {tag}'
-        return elements[0]
-
-    def read_allowed_HA(self):
-        allowed_HA = {}
-        for key in ('minAllowedHA','maxAllowedHA'):
-            tag = f'sbl:Preconditions/prj:{key}'
-            element = self.find_unique_element(tag)
-            HA = float(element.text)
-            xml_unit = element.attrib['unit']
-            if xml_unit == 'deg':
-                unit = u.deg
-            elif xml_unit == 'h':
-                unit = u.hour
-            else:
-                raise RuntimeError(f'unknown unit {unit} for {key}')
-            HA = Angle(HA,unit=unit)
-            output_key = key[:3]
-            allowed_HA[output_key] = HA
-        assert allowed_HA['min'] < allowed_HA['max']
-        return allowed_HA
-
-    def read_RequiresTPAntenna(self):
-        text = self.root.findtext('sbl:SchedulingConstraints/sbl:sbRequiresTPAntennas',
-                                  namespaces=self.namespaces)
-        if text is None:
-            return None
-        if text == 'true':
-            return True
-        elif text == 'false':
-            return False
-        else:
-            raise RuntimeError(f'unknown xml content: {text}')
-
-    def read_coordinates(self,coord_data):
-        coord = {}
-        for xml_key,output_key in self.long_lat_keys.items():
-            element = coord_data.find(f'val:{xml_key}',namespaces=self.namespaces)
-            assert element.attrib['unit'] == 'deg'
-            coord[output_key] = float(element.text)
-        return SkyCoord(ra=coord['ra']*u.deg,dec=coord['dec']*u.deg)
-
-    def get_representative_coordinates(self):
-        tag = 'sbl:SchedulingConstraints/sbl:representativeCoordinates'
-        coord_data = self.find_unique_element(tag)
-        return self.read_coordinates(coord_data=coord_data)
-
-    def read_modeName(self):
-        return self.root.findtext('sbl:modeName',namespaces=self.namespaces)
-
-    def is_Polarisation(self):
-        return self.read_modeName() == 'Polarization Interferometry'
-
-    def is_VLBI(self):
-        return 'VLBI' in self.read_modeName()
-
-    def is_Solar(self):
-        return 'Solar' in self.read_modeName()
-
-    def get_nominal_config(self):
-        return self.root.findtext('sbl:SchedulingConstraints/sbl:nominalConfiguration',
-                                  namespaces=self.namespaces)
-
-    def is_7m(self):
-        return self.get_nominal_config() == '7M'
-
-    def get_FieldSource_names(self):
-        field_sources = self.root.findall("sbl:FieldSource",
-                                          namespaces=self.namespaces)
-        names = [f.find('sbl:name',namespaces=self.namespaces).text for f in
-                 field_sources]
-        return names
-
-    def determine_calibrators(self):
-        calibrators = []
-        field_source_names = self.get_FieldSource_names()
-        for source in field_source_names:
-            candidate_cal_types = []
-            for cal,keywords in Calibrator.calibrator_keywords.items():
-                if any([keyword in source for keyword in keywords]):
-                    candidate_cal_types.append(cal)
-            if len(candidate_cal_types) == 0:
-                logging.info(f'Source {source} is not a calibrator')
-                continue
-            elif len(candidate_cal_types) == 1:
-                cal_type = candidate_cal_types[0]
-                tag = f"sbl:FieldSource[sbl:name='{source}']"
-                cal_elements = self.root.findall(tag,namespaces=self.namespaces)
-                for xml_data in cal_elements:
-                    calibrators.append(Calibrator(name=source,cal_type=cal_type,xml_data=xml_data))
-            else:
-                raise RuntimeError(f'could not uniquely identify cal type of source {source}')
-        self.calibrators = calibrators
-
-    def get_PolCal(self):
-        pol_calibrators = [cal for cal in self.calibrators if
-                           cal.cal_type=='Polarization']
-        assert len(pol_calibrators) == 1
-        return pol_calibrators[0]
-
-    def PolCal_is_fixed(self):
-        pol_cal = self.get_PolCal()
-        return (not pol_cal.is_query())
-
-    def get_PolCal_coordinates(self):
-        pol_cal = self.get_PolCal()
-        PolCal_data = pol_cal.xml_data
-        coord_data = PolCal_data.find('sbl:sourceCoordinates',
-                                      namespaces=self.namespaces)
-        return self.read_coordinates(coord_data=coord_data)
-
-    def get_NotetoAoD(self):
-        return self.root.findtext('prj:note',namespaces=self.namespaces)
-
-
-class SingleSimulation():
-
-    def __init__(self,project_code,SB,epoch,array_config):
-        self.project_code = project_code
-        self.SB = SB
-        self.epoch = epoch
-        self.array_config = array_config
+    def __init__(self,xml_filepath):
+        self.xml_filepath = xml_filepath
+        self.xml_filename = os.path.basename(self.xml_filepath)
+        self.xml_name = pathlib.Path(xml_filepath).stem
         self.parent_directory = os.getcwd()
-        self.output_folder = os.path.join(self.parent_directory,
-                                          f'simulation_output_{project_code}_{SB}')
-        if os.path.isdir(self.output_folder):
-            self.delete_output_folder()
-        self.create_output_folder()
 
-    def run(self):
-        self.clean_output_folder()
-        #in principle I could test here if the xml is already available from a previous
-        #simulation and use it, but the time to get the xml is only ~2s, so for simplicity
-        #let's just download the xml every time...
-        command = f'simulateSB.py {self.project_code} {self.SB} {self.epoch}'
-        if self.array_config is not None:
-            command += f' -C {self.array_config}'
-            if self.array_config[-4:] == '.cfg':
-                logging.info(f'will use cfg file {self.array_config}, copying it'
-                             +' to the work folder')
-                shutil.copy(src=self.array_config,dst=self.output_folder)
+    def simulate(self,epoch,array_config):
+        self.prepare_simulation(epoch=epoch,array_config=array_config)
+        command = self.get_command()
         logging.info(f'going to execute the following command:\n{command}')
-        os.chdir(self.output_folder)
+        os.chdir(self.work_folder)
         output = subprocess.run(command,shell=True,universal_newlines=True,
                                 stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         pipe = {'stdout':output.stdout,'stderr':output.stderr}
@@ -244,65 +98,150 @@ class SingleSimulation():
         for key,logger in loggers.items():
             logger(f'{key} of simulateSB.py:')
             logger(pipe[key])
-        if output.returncode != 0:
-            success = False
-            pipe_messages = {key:p.split('\n') for key,p in pipe.items()}
-            pipe_messages = {key:[m for m in messages if m!=''] for key,messages
-                             in pipe_messages.items()}
-            found_error_message = False
-            #check messages, starting from the latest
-            msg_iterator = itertools.zip_longest(pipe_messages['stdout'][::-1],
-                                                 pipe_messages['stderr'][::-1],
-                                                 fillvalue='')
-            max_messages_to_go_back = 5
-            for i,(std_msg,error_msg) in enumerate(msg_iterator):
-                #give preference to error_msg (i.e. check it first):
-                for msg in (error_msg,std_msg):
-                    casefolded_msg = msg.casefold()
-                    if 'error' in casefolded_msg\
-                                         or 'exception' in casefolded_msg:
-                        logging.info('identified output error message from failed '
-                                     +f'simulation: {msg}')
-                        found_error_message = True
-                        fail_reason = msg
-                        break
-                if found_error_message or i >= max_messages_to_go_back-1:
-                    break
-            if not found_error_message:
-                logging.info('did not find error message, will take last output'
-                             +' of stdout instead')
-                fail_reason = pipe['stdout'][-1]
-        else:
-            if self.summary_file_reports_success():
-                success = True
-                fail_reason = None
-            else:
-                success = False
-                fail_reason = 'summary file does not report success'
         os.chdir(self.parent_directory)
-        return command,success,fail_reason
+        return SimulationResult(executed_command=command,simulation_output=output,
+                                output_folder=self.work_folder,
+                                xml_filename=self.xml_filename)
 
-    def summary_file_reports_success(self):
-        summary_filename = f'log_{self.project_code}_{self.SB}.xml_OSS_summary.txt'
-        filepath = os.path.join(self.output_folder,summary_filename)
-        with open(filepath) as f:
-            contents = f.readlines()
-        return 'SUCCESS' in contents[1]
+    def prepare_simulation(self,epoch,array_config):
+        self.epoch = epoch
+        self.array_config = array_config
+        self.create_work_folder()
+        if array_config is not None:
+            if array_config[-4:] == '.cfg':
+                self.copy_cfg_file()
 
-    def create_output_folder(self):
-        logging.info(f'going to create {self.output_folder}')
-        os.mkdir(self.output_folder)
+    def create_work_folder(self):
+        foldername = f'simulation_output_{self.xml_name}_{self.epoch}_{self.array_config}'
+        work_folder_path = os.path.join(self.parent_directory,foldername)
+        #check explicitly that we are not overwriting (not really necessary because
+        #os.mkdir should raise an exception if folder already exists)
+        assert not os.path.isdir(work_folder_path)
+        os.mkdir(work_folder_path)
+        self.work_folder = work_folder_path
 
-    def clean_output_folder(self):
-        for filename in os.listdir(self.output_folder):
-            filepath = os.path.join(self.output_folder,filename)
-            logging.info(f'deleting {filepath}')
-            os.remove(filepath)
+    def copy_cfg_file(self):
+        logging.info(f'will use cfg file {self.array_config}, copying it'
+                     +' to the work folder')
+        shutil.copy(src=self.array_config,dst=self.work_folder)
 
-    def delete_output_folder(self):
-        logging.info(f'going to delete {self.output_folder}')
-        shutil.rmtree(self.output_folder)
+    def get_command(self):
+        command = f'simulateSB.py {self.xml_filepath} {self.epoch}'
+        if self.array_config is not None:
+            command += f' -C {self.array_config}'
+        return command
 
+
+class SB():
+
+    def __init__(self,project_code,name,array_config):
+        self.project_code = project_code
+        self.name = name
+        self.array_config = array_config
+        cwd = os.getcwd()
+        xml_filename = f'{project_code}_{name}.xml'.replace(' ','_')
+        self.xml_filepath = os.path.join(cwd,xml_filename)
+        OT_xml.download_xml(project_code=self.project_code,SB=self.name,
+                            filepath=self.xml_filepath)
+        self.xml_reader = OT_xml.OT_XML_Reader(filepath=self.xml_filepath)
+        mode_name = self.xml_reader.read_modeName()
+        self.is_Polarisation = mode_name == 'Polarization Interferometry'
+        self.is_VLBI =  'VLBI' in mode_name
+        self.is_Solar = 'Solar' in mode_name
+        self.is_B2B = mode_name == 'BandToBand Interferometry'
+        nominal_config = self.xml_reader.get_nominal_config()
+        self.is_7m = nominal_config == '7M'
+        self.calibrators = self.xml_reader.read_calibrators()
+        self.determine_HA_considered_by_DSA()
+        self.determine_HAs_to_simulate()
+
+    def determine_HA_considered_by_DSA(self):
+        rep_coord = self.xml_reader.get_representative_coordinates()
+        #DSA will consider the following HA limits:
+        if rep_coord.dec.deg >= -5:
+            min_HA = Angle(-3*u.hour)
+            max_HA = Angle(2*u.hour)
+        else:
+            min_HA = Angle(-4*u.hour)
+            max_HA = Angle(3*u.hour)
+        logging.info(f'preliminary DSA HA range: {min_HA.hour} h to {max_HA.hour} h')
+        #TODO change -4h to -3h for Polarisation? check with Ignazio
+        #Polarization SBs are to be executed sequentially (usually for 2 or 3 executions)
+        #to cover enough parallactic angles for calibration.
+        #So, for Pol observations, there is an additional condition on the HA:
+        #For the first execution of the SB, Pol Cal needs to have HA between
+        #-4h and -0.5h.
+        #So we might need to adjust the lower bound (min_HA).
+        #On the other hand, we can do the second execution at an HA that is larger
+        #than what would be allowed in the first execution. So we should not decrease max_HA,
+        #because DSA might consider up to max_HA at least for second/third executions
+        #TODO what if the pol cal is too much in front of the target such that 
+        #its HA is always larger than -0.5h even at min_HA? Is this case realistic/relevant?
+        if self.is_Polarisation:
+            logging.info('polarization SB, going to check if min HA considered'
+                         +' by DSA needs to be adjudsted')
+            min_pol_cal_HA = Angle(-4*u.hour)
+            pol_cal_coord = self.xml_reader.get_PolCal_coordinates()
+            logging.info(f'Pol Cal RA: {pol_cal_coord.ra.deg} deg')
+            logging.info(f'representative coord RA: {rep_coord.ra.deg} deg')
+            #note that in special cases, delta_ra can be very large although
+            #angular separation is small, e.g. if rep_coord.ra=1deg and
+            #pol_cal_coord.ra = 359 deg
+            delta_ra = rep_coord.ra - pol_cal_coord.ra
+            #if delta_ra is positive, then rep coord has larger ra, thus smaller HA
+            #because HA = LST - ra; therefore target_HA=pol_cal_HA-delta_ra
+            target_HA_at_min_pol_cal_HA = min_pol_cal_HA - delta_ra
+            #we need angles between -12 and 12 h in order to compare to min_HA
+            target_HA_at_min_pol_cal_HA.wrap_at(12*u.hour,inplace=True)
+            min_HA = Angle(max(min_HA.hour,target_HA_at_min_pol_cal_HA.hour)*u.hour)
+            logging.info(f'min HA considered by DSA after checking pol cal: {min_HA.hour} h')
+        self.min_HA_DSA = min_HA
+        self.max_HA_DSA = max_HA
+
+    def determine_HAs_to_simulate(self):
+        min_HA,max_HA = self.min_HA_DSA.hour,self.max_HA_DSA.hour
+        assert min_HA < max_HA
+        HAs = [min_HA,max_HA]
+        HA = np.ceil(min_HA).astype(int)
+        while HA < max_HA:
+            HAs.append(HA)
+            HA += 1
+        HAs = np.unique(HAs)
+        self.HA_to_simulate = [Angle(HA*u.hour) for HA in HAs]
+
+    @staticmethod
+    def convert_HA_to_epoch(HA):
+        if HA.hour == 0:
+            return 'TRANSIT'
+        else:
+            return f'TRANSIT{HA.hour:+}h'
+
+    def run_simulations(self):
+        simulator = SBSimulator(xml_filepath=self.xml_filepath)
+        self.simulation_results = []
+        for HA in self.HA_to_simulate:
+            epoch = self.convert_HA_to_epoch(HA=HA)
+            sim_result = simulator.simulate(epoch=epoch,array_config=self.array_config)
+            self.simulation_results.append(sim_result)
+
+    def check_fixed_calibrators(self):
+        raise NotImplementedError
+
+
+if __name__ == '__main__':
+    logging_level = logging.INFO
+    #logging_level = logging.ERROR
+    logging.basicConfig(format='%(levelname)s: %(message)s',level=logging_level,
+                        stream=sys.stdout)
+
+    test_SB = SB(project_code='2023.1.01430.S',name='MMS_1_a_08_TM2',
+                 array_config='c43-3')
+    # test_SB.run_simulations()
+
+
+
+
+'''
 
 class BulkSimulation():
 
@@ -420,12 +359,6 @@ class BulkSimulation():
         HAs = np.unique(HAs)
         return [Angle(HA*u.hour) for HA in HAs]
 
-    @staticmethod
-    def convert_HA_to_str(HA):
-        if HA.hour == 0:
-            return 'TRANSIT'
-        else:
-            return f'TRANSIT{HA.hour:+}h'
 
     def get_array_configs(self,OT_xml):
         raise NotImplementedError
@@ -716,7 +649,7 @@ class BulkSimulation7m(BulkSimulation):
 
 class CheckTP_for_7m_SBs():
 
-    '''Check which SBs need TP'''
+    #Check which SBs need TP
     config7m_ID = '-C 7m'
     configTP_ID = '-C aca.cm10.pm3.cfg'
 
@@ -756,7 +689,7 @@ class CheckTP_for_7m_SBs():
         return '_'.join([sim['project_code'],sim['SB']])
 
     def run_additional_simulations(self):
-        '''For those SBs that fail, we run all HAs'''
+        #For those SBs that fail, we run all HAs
         failed_simulations = self.get_failed_simulations()
         self.additional_sim_IDs = [self.get_sim_ID(sim) for sim in
                                    failed_simulations]
@@ -909,7 +842,6 @@ class CheckTP_for_7m_SBs():
                 file.write(f'{value}: {n_entries}\n')
         logging.info(f'wrote statistics for needs_TP to {filepath}')
 
-
 if __name__ == '__main__':
     from datetime import date
     logging.basicConfig(format='%(levelname)s: %(message)s',level=logging.INFO,
@@ -944,3 +876,4 @@ if __name__ == '__main__':
     #test_xml = OT_XML_File('../example_xml_files/example_VLBI_2022.1.01268.V.xml')
     #test_xml = OT_XML_File('../example_xml_files/2023.1.00908.S_IRC+1021_a_07_7M.xml')
     test_xml = OT_XML_File('../example_xml_files/example_NoteToAoD_2023.1.00578.S.xml')
+'''
