@@ -22,17 +22,18 @@ import sys
 
 class Calibrator():
 
-    calibrator_types = ['Polarization','Bandpass','Phase','Check','Amplitude']
+    calibrator_types = ['Polarization','Bandpass','Phase','Check','Amplitude',
+                        'DGC']
     calibrator_keywords = {cal:[cal,cal.lower()] for cal in calibrator_types}
     
-    def __init__(self,name,cal_type,xml_data):
+    def __init__(self,name,cal_type,element):
         self.name = name
         assert cal_type in self.calibrator_types
         self.cal_type = cal_type
-        self.xml_data = xml_data
+        self.element = element
         
     def is_query(self):
-        is_query = self.xml_data.findtext('sbl:isQuery',namespaces=OT_XML_File.namespaces)
+        is_query = self.element.findtext('sbl:isQuery',namespaces=OT_XML_File.namespaces)
         if is_query == 'false':
             return False
         elif is_query == 'true':
@@ -130,11 +131,20 @@ class OT_XML_File():
 
     def read_coordinates(self,coord_data):
         coord = {}
+        unit_names = []
         for xml_key,output_key in self.long_lat_keys.items():
             element = coord_data.find(f'val:{xml_key}',namespaces=self.namespaces)
-            assert element.attrib['unit'] == 'deg'
+            unit_names.append(element.attrib['unit'])
             coord[output_key] = float(element.text)
-        return SkyCoord(ra=coord['ra']*u.deg,dec=coord['dec']*u.deg)
+        assert len(set(unit_names)) == 1,f'ra and dec have different units: {unit_names}'
+        unit_name = unit_names[0]
+        if unit_name == 'deg':
+            unit = u.deg
+        elif unit_name == 'rad':
+            unit = u.rad
+        else:
+            raise RuntimeError(f'unknown unit {unit_name}')
+        return SkyCoord(ra=coord['ra']*unit,dec=coord['dec']*unit)
 
     def get_representative_coordinates(self):
         tag = 'sbl:SchedulingConstraints/sbl:representativeCoordinates'
@@ -167,23 +177,31 @@ class OT_XML_File():
                  field_sources]
         return names
 
+    def get_calibrator_observing_group(self):
+        tag = "sbl:ObservingGroup[sbl:name='Calibrators']"
+        obs_group_element = self.find_unique_element(tag=tag)
+        return obs_group_element.findall("sbl:OrderedTarget",namespaces=self.namespaces)
+
     def determine_calibrators(self):
         calibrators = []
-        field_source_names = self.get_FieldSource_names()
-        for source in field_source_names:
+        unique_field_source_names = set(self.get_FieldSource_names())
+        for source in unique_field_source_names:
             candidate_cal_types = []
             for cal,keywords in Calibrator.calibrator_keywords.items():
                 if any([keyword in source for keyword in keywords]):
-                    candidate_cal_types.append(cal)
+                        candidate_cal_types.append(cal)
             if len(candidate_cal_types) == 0:
-                logging.info(f'Source {source} is not a calibrator')
+                logging.info(f"Source '{source}' is not a calibrator")
                 continue
             elif len(candidate_cal_types) == 1:
                 cal_type = candidate_cal_types[0]
                 tag = f"sbl:FieldSource[sbl:name='{source}']"
                 cal_elements = self.root.findall(tag,namespaces=self.namespaces)
-                for xml_data in cal_elements:
-                    calibrators.append(Calibrator(name=source,cal_type=cal_type,xml_data=xml_data))
+                for cal_element in cal_elements:
+                    calibrator = Calibrator(name=source,cal_type=cal_type,
+                                            element=cal_element)
+                    calibrators.append(calibrator)
+                    logging.info(f"found calibrator of type '{cal_type}'")
             else:
                 raise RuntimeError(f'could not uniquely identify cal type of source {source}')
         self.calibrators = calibrators
@@ -191,8 +209,25 @@ class OT_XML_File():
     def get_PolCal(self):
         pol_calibrators = [cal for cal in self.calibrators if
                            cal.cal_type=='Polarization']
-        assert len(pol_calibrators) == 1
-        return pol_calibrators[0]
+        if len(pol_calibrators) == 1:
+            logging.info("only one Pol Cal")
+            return pol_calibrators[0]
+        elif len(pol_calibrators) > 1:
+            logging.info(f"{len(pol_calibrators)} Pol Cals, need to determine"+
+                         " which is in Cal observing group")
+            obs_group = self.get_calibrator_observing_group()
+            candidate_pol_cals = []
+            for ordered_target in obs_group:
+                partId = ordered_target.find("sbl:TargetRef",namespaces=self.namespaces).attrib["partId"]
+                target = self.find_unique_element(f"sbl:Target[@entityPartId='{partId}']")
+                field_source_ref = target.find("sbl:FieldSourceRef",namespaces=self.namespaces).attrib["partId"]
+                for pol_cal in pol_calibrators:
+                    if field_source_ref == pol_cal.element.attrib["entityPartId"]:
+                        candidate_pol_cals.append(pol_cal)
+            assert len(candidate_pol_cals) == 1
+            return candidate_pol_cals[0]
+        else:
+            raise RuntimeError("unable to determine Pol Cal")
 
     def PolCal_is_fixed(self):
         pol_cal = self.get_PolCal()
@@ -200,7 +235,7 @@ class OT_XML_File():
 
     def get_PolCal_coordinates(self):
         pol_cal = self.get_PolCal()
-        PolCal_data = pol_cal.xml_data
+        PolCal_data = pol_cal.element
         coord_data = PolCal_data.find('sbl:sourceCoordinates',
                                       namespaces=self.namespaces)
         return self.read_coordinates(coord_data=coord_data)
@@ -240,10 +275,13 @@ class SingleSimulation():
         output = subprocess.run(command,shell=True,universal_newlines=True,
                                 stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         pipe = {'stdout':output.stdout,'stderr':output.stderr}
-        loggers = {'stdout':logging.info,'stderr':logging.error}
-        for key,logger in loggers.items():
-            logger(f'{key} of simulateSB.py:')
-            logger(pipe[key])
+        for pipename,p in pipe.items():
+            print(f'{pipename}: {p}')
+        #don't put OSS output to log, to reduce log file size...
+        # loggers = {'stdout':logging.info,'stderr':logging.error}
+        # for key,logger in loggers.items():
+        #     logger(f'{key} of simulateSB.py:')
+        #     logger(pipe[key])
         if output.returncode != 0:
             success = False
             pipe_messages = {key:p.split('\n') for key,p in pipe.items()}
@@ -306,7 +344,7 @@ class SingleSimulation():
 
 class BulkSimulation():
 
-    SB_data_to_extract = ('code','sbname','p2g_account','sb_state',
+    SB_data_to_extract = ('code','sbname','p2g_account','sb_state','sb_state_flag',
                           'dc_letter_grade')
     ALMA_site_latitude = np.radians(-23.029)
     min_elevation = np.radians(20)
@@ -350,12 +388,12 @@ class BulkSimulation():
         rep_coord = OT_xml.get_representative_coordinates()
         #DSA will consider the following HA limits:
         if rep_coord.dec.deg >= -5:
-            min_HA = Angle(-3*u.hour)
-            max_HA = Angle(2*u.hour)
+            min_HA_DSA = Angle(-3*u.hour)
+            max_HA_DSA = Angle(2*u.hour)
         else:
-            min_HA = Angle(-4*u.hour)
-            max_HA = Angle(3*u.hour)
-        logging.info(f'preliminary HA range: {min_HA.hour} h to {max_HA.hour} h')
+            min_HA_DSA = Angle(-4*u.hour)
+            max_HA_DSA = Angle(3*u.hour)
+        logging.info(f'HA range considered by DSA: {min_HA_DSA.hour} h to {max_HA_DSA.hour} h')
         #however, P2G can change the allowed HA in the SB, so we need to adjust
         #the HA if necessary:
         allowed_HA = OT_xml.read_allowed_HA()
@@ -371,9 +409,8 @@ class BulkSimulation():
             error_message = f'need allowed_HA ({key}) to wrap at 12h to be'\
                 +f' comparable to min_HA and max_HA, but found HA = {HA.deg} deg'
             assert -180 <= HA.deg <= 180,error_message
-        assert allowed_HA['min'] < allowed_HA['max']
-        min_HA = Angle(max(min_HA.hour,allowed_HA['min'].hour) * u.hour)
-        max_HA = Angle(min(max_HA.hour,allowed_HA['max'].hour) * u.hour)
+        min_HA = Angle(max(min_HA_DSA.hour,allowed_HA['min'].hour) * u.hour)
+        max_HA = Angle(min(max_HA_DSA.hour,allowed_HA['max'].hour) * u.hour)
         logging.info(f'HA range after reading xml: {min_HA.hour} h to {max_HA.hour} h')
         #TODO change -4h to -3h for Polarisation, check with Ignazio
         #for Pol observations, there is an additional condition on the HA:
@@ -385,6 +422,7 @@ class BulkSimulation():
         #than what is allowed by pol cal. On the other hand, we can do the second
         #execution at an HA that is larger than what would be allowed in the
         #first execution. So we should not decrease max_HA
+        #TODO alert if HA range is very small
         if OT_xml.is_Polarisation():
             logging.info('polarization SB, going to check if min HA needs'
                          +' to be adjudsted')
@@ -404,12 +442,22 @@ class BulkSimulation():
             min_HA = Angle(max(min_HA.hour,target_HA_for_min_pol_cal_HA.hour)
                            *u.hour)
             logging.info(f'min HA after checking pol cal: {min_HA.hour} h')
-        return min_HA,max_HA
+        if not min_HA < max_HA:
+            logging.warn('unable to determine valid HA limits')
+            #this can happen if e.g. in the xml, min_HA=4H and max_HA=6H
+            #TODO if P2G sets e.g. minHA=4H, maxHA=6H, should we simulate those
+            #HAs, even if they are not considered by DSA?
+            return None,None
+        else:
+            return min_HA,max_HA
 
     def get_HAs_to_simulate(self,OT_xml):
         if self.HAs is not None:
             return [Angle(HA*u.hour) for HA in self.HAs]
         min_HA,max_HA = self.determine_min_max_HA_to_simulate(OT_xml=OT_xml)
+        if min_HA is None or max_HA is None:
+            logging.warn('HA limits are invalid, cannot decide which HAs to simulate')
+            return []
         min_HA,max_HA = min_HA.hour,max_HA.hour
         assert min_HA < max_HA
         HAs = [min_HA,max_HA]
@@ -438,6 +486,11 @@ class BulkSimulation():
               + np.cos(self.ALMA_site_latitude)*np.cos(DEC.rad)*np.cos(HA.rad)
         return np.arcsin(sin_elevation)
 
+    def skip_simulation(self,info_message,skip_reason,executed_simulation):
+        logging.info(info_message)
+        executed_simulation['skip_reason'] = skip_reason
+        self.executed_simulations.append(executed_simulation)
+
     def run_simulations(self,obs_dates,skip_fixed_cal_SBs=False):
         SB_project_codes = self.selected_SBs['code']
         n_SBs = len(SB_project_codes)
@@ -458,6 +511,7 @@ class BulkSimulation():
             executed_simulation = {'project_code':code,'SB':SB,
                                    'p2g':self.selected_SBs['p2g_account'][i],
                                    'sb_state':self.selected_SBs['sb_state'][i],
+                                   'sb_state_flag':self.selected_SBs['sb_state_flag'][i],
                                    'note_to_aod':OT_xml.get_NotetoAoD(),
                                    'executed_commands_list':[],'epochs':[],
                                    'successful_simulations_list':[],
@@ -469,9 +523,11 @@ class BulkSimulation():
                 executed_simulation['xml_requires_TP'] = requires_tp
             if OT_xml.is_Polarisation():
                 if not OT_xml.PolCal_is_fixed():
-                    logging.info('Polarization Calibrator not fixed. Not going to simulate')
-                    executed_simulation['skip_reason'] = 'Pol Cal not fixed'
-                    self.executed_simulations.append(executed_simulation)
+                    info_message = 'Polarization Calibrator not hardcoded. Not '\
+                                    +'going to simulate'
+                    self.skip_simulation(info_message=info_message,
+                                         skip_reason='Pol Cal not hardcoded',
+                                         executed_simulation=executed_simulation)
                     continue
                 else:
                     logging.info('Pol Cal fixed, as expected')
@@ -480,11 +536,20 @@ class BulkSimulation():
                     fixed_calibrators = [cal.cal_type for cal in OT_xml.calibrators
                                          if not cal.is_query()]
                     fixed_calibrators = ','.join(fixed_calibrators)
-                    logging.info(f'Calibrators ({fixed_calibrators}) fixed, not going to simulate')
-                    executed_simulation['skip_reason'] = f'calibrators ({fixed_calibrators}) fixed'
-                    self.executed_simulations.append(executed_simulation)
+                    info_message = f'Calibrators ({fixed_calibrators}) fixed, '\
+                                  +'not going to simulate'
+                    self.skip_simulation(
+                             info_message=info_message,
+                             skip_reason=f'calibrators ({fixed_calibrators}) fixed',
+                             executed_simulation=executed_simulation)
                     continue
             HAs = self.get_HAs_to_simulate(OT_xml=OT_xml)
+            if len(HAs) == 0:
+                self.skip_simulation(
+                         info_message='no HAs to simulate, will skip',
+                         skip_reason='invalid HA limits?',
+                         executed_simulation=executed_simulation)
+                continue
             logging.info('HAs to simulate: '+str([f'{HA.hour}h' for HA in HAs]))
             array_configs = self.get_array_configs(OT_xml=OT_xml)
             representative_coord = OT_xml.get_representative_coordinates()
@@ -551,8 +616,8 @@ class BulkSimulation():
                                            key=lambda sim: sim['project_code'])
 
     def write_failed_and_skipped_simulations_to_csvfile(self,filepath):
-        fieldnames = ['project_code','SB','p2g','sb_state','failed_simulations',
-                      'fail_reasons','skip_reason','note_to_aod']
+        fieldnames = ['project_code','SB','p2g','sb_state','sb_state_flag',
+                      'failed_simulations','fail_reasons','skip_reason','note_to_aod']
         with open(filepath,'w',newline='') as csvfile:
             writer = csv.DictWriter(csvfile,fieldnames=fieldnames,
                                     extrasaction='ignore')
@@ -649,10 +714,12 @@ class BulkSimulation12m(BulkSimulation):
             support_arc_selection = [True,]*len(self.raw_SB_data['support_arc'])
         state_selection = [(state not in self.excluded_states) for state in
                            self.raw_SB_data['sb_state']]
+        logging.info(f"{sum(state_selection)} SBs pass state selection")
         config_number = self.get_array_config_number()
         config_key = f'selected_c{config_number}'
-        array_config_selection = [entry=='TRUE' for entry in
+        array_config_selection = [entry.lower()=='true' for entry in
                                   self.raw_SB_data[config_key]]
+        logging.info(f"{sum(array_config_selection)} SBs pass array config selection")
         custom_selection = self.get_custom_selection()
         assert len(support_arc_selection) == len(state_selection)\
                  == len(array_config_selection) == len(custom_selection)
@@ -671,6 +738,7 @@ class BulkSimulation7m(BulkSimulation):
 
     project_tracker_fieldnames = {'code':'Project Code','sbname':'SB Name',
                                   'p2g_account':'P2G','sb_state':'State',
+                                  'sb_state_flag':'SubState',
                                   'dc_letter_grade':'Grade'}
 
     def __init__(self,SB_list,array_configs=None,custom_SB_filter=None,HAs=None):
@@ -706,17 +774,17 @@ class BulkSimulation7m(BulkSimulation):
             self.selected_SBs[key] = list(itertools.compress(
                                          self.raw_SB_data[PT_key],custom_selection))
         #PT includes the substates, so let's add it to the state:
-        sub_states = list(itertools.compress(
-                                     self.raw_SB_data['SubState'],custom_selection))
-        self.selected_SBs['sb_state'] = [state+substate for state,substate in
-                                         zip(self.selected_SBs['sb_state'],sub_states)]
+        # sub_states = list(itertools.compress(
+        #                              self.raw_SB_data['SubState'],custom_selection))
+        # self.selected_SBs['sb_state'] = [state+substate for state,substate in
+        #                                  zip(self.selected_SBs['sb_state'],sub_states)]
         logging.info(f'of {len(custom_selection)} SBs in the list, '
                      +f'{self.get_n_selected_SBs()} were selected')
 
 
 class CheckTP_for_7m_SBs():
 
-    '''Check which SBs need TP'''
+    '''Check which 7M SBs need TP'''
     config7m_ID = '-C 7m'
     configTP_ID = '-C aca.cm10.pm3.cfg'
 
@@ -888,9 +956,10 @@ class CheckTP_for_7m_SBs():
         self.executed_simulations = p2g_action + no_action
 
     def write_needsTP_to_csvfile(self,filepath):
-        fieldnames = ['project_code','SB','p2g','sb_state','failed_simulations',
-                      'fail_reasons','skip_reason','successful_simulations',
-                      'TP requested','TP needed','P2G action']
+        fieldnames = ['project_code','SB','p2g','sb_state','sb_state_flag',
+                      'failed_simulations','fail_reasons','skip_reason',
+                      'successful_simulations','TP requested','TP needed',
+                      'P2G action']
         with open(filepath,'w',newline='') as csvfile:
             writer = csv.DictWriter(csvfile,fieldnames=fieldnames,
                                     extrasaction='ignore')
@@ -943,4 +1012,6 @@ if __name__ == '__main__':
     #test_xml = OT_XML_File('../example_xml_files/example_solar_2022.1.01544.S.xml')
     #test_xml = OT_XML_File('../example_xml_files/example_VLBI_2022.1.01268.V.xml')
     #test_xml = OT_XML_File('../example_xml_files/2023.1.00908.S_IRC+1021_a_07_7M.xml')
-    test_xml = OT_XML_File('../example_xml_files/example_NoteToAoD_2023.1.00578.S.xml')
+    #test_xml = OT_XML_File('../example_xml_files/example_NoteToAoD_2023.1.00578.S.xml')
+    #test_xml = OT_XML_File('2023.1.00750.S _HerBS-10_a_10_7M.xml')
+    test_xml = OT_XML_File('/home/gianni/Downloads/2pol/SchedBlock0.xml')
