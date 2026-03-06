@@ -1,0 +1,226 @@
+Execution Complete: Elapsed Time 74:28
+	State:   SUCCESS
+	Message: None
+	Total of: 68 Scans (129 Subscans)
+
+ 35 Scan Sequences: 
+	Sequence   1 Scans [1]
+	Sequence   2 Scans [3]
+	Sequence   3 Scans [5]
+	Sequence   4 Scans [8, 9, 10, 11, 12, 13, 14, 15, 16]
+	Sequence   5 Scans [17]
+	Sequence   6 Scans [19]
+	Sequence   7 Scans [21]
+	Sequence   8 Scans [22]
+	Sequence   9 Scans [23]
+	Sequence  10 Scans [24, 25]
+	Sequence  11 Scans [26]
+	Sequence  12 Scans [28, 29]
+	Sequence  13 Scans [30]
+	Sequence  14 Scans [31, 32]
+	Sequence  15 Scans [33]
+	Sequence  16 Scans [35]
+	Sequence  17 Scans [36]
+	Sequence  18 Scans [37]
+	Sequence  19 Scans [38]
+	Sequence  20 Scans [39]
+	Sequence  21 Scans [40]
+	Sequence  22 Scans [42]
+	Sequence  23 Scans [43]
+	Sequence  24 Scans [44, 45]
+	Sequence  25 Scans [46]
+	Sequence  26 Scans [47]
+	Sequence  27 Scans [49]
+	Sequence  28 Scans [50]
+	Sequence  29 Scans [51]
+	Sequence  30 Scans [52, 53]
+	Sequence  31 Scans [54]
+	Sequence  32 Scans [55]
+	Sequence  33 Scans [56]
+	Sequence  34 Scans [57]
+	Sequence  35 Scans [60, 61, 62, 63, 64, 65, 66, 67, 68]
+
+Scan Summary:
+  1       0:06 CALIBRATE_POINTING       J2253+1608          Band 7 pointing                              10 Subscans    
+               CALIBRATE_WVR                                                                                            
+  2       1:48 CALIBRATE_ATMOSPHERE     J2253+1608          ATM_Band 7 299.2 GHz reference setup          4 Subscans    
+               CALIBRATE_WVR                                                                                            
+  3       2:20 CALIBRATE_BANDPASS       J2253+1608          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+               CALIBRATE_FLUX                                                                                           
+  4       7:29 CALIBRATE_ATMOSPHERE     J2253+1608          ATM_OHp Science setup_1                       4 Subscans    
+               CALIBRATE_WVR                                                                                            
+  5       8:01 CALIBRATE_BANDPASS       J2253+1608          OHp Science setup_1                           3 Subscans    
+               CALIBRATE_WVR                                                                                            
+               CALIBRATE_FLUX                                                                                           
+  6      23:24 CALIBRATE_ATMOSPHERE     J2253+1608          ATM_Band 7 299.2 GHz reference setup          3 Subscans    
+               CALIBRATE_WVR                                                                                            
+  7      23:44 CALIBRATE_ATMOSPHERE     J2253+1608          ATM_OHp Science setup_1                       3 Subscans    
+               CALIBRATE_WVR                                                                                            
+  8      24:10 CALIBRATE_DIFFGAIN       J2253+1608          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+  9      24:29 CALIBRATE_DIFFGAIN       J2253+1608          OHp Science setup_1                           1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 10      25:01 CALIBRATE_DIFFGAIN       J2253+1608          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 11      25:21 CALIBRATE_DIFFGAIN       J2253+1608          OHp Science setup_1                           1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 12      25:53 CALIBRATE_DIFFGAIN       J2253+1608          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 13      26:13 CALIBRATE_DIFFGAIN       J2253+1608          OHp Science setup_1                           1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 14      26:45 CALIBRATE_DIFFGAIN       J2253+1608          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 15      27:05 CALIBRATE_DIFFGAIN       J2253+1608          OHp Science setup_1                           1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 16      27:25 CALIBRATE_DIFFGAIN       J2253+1608          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 17      27:45 CALIBRATE_POINTING       J0058-3234          Band 7 pointing                              10 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 18      29:27 CALIBRATE_ATMOSPHERE     J0038-2459          ATM_Band 7 299.2 GHz reference setup          4 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 19      29:59 CALIBRATE_PHASE          J0038-2459          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 20      30:25 CALIBRATE_ATMOSPHERE     NGC_253_1           ATM_OHp Science setup_1                       4 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 21      30:57 OBSERVE_CHECK_SOURCE     J0058-3234          OHp Science setup_1                           1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 22      32:06 OBSERVE_TARGET           NGC_253_1           OHp Science setup_1                           1 Subscans    
+ 23      33:46 CALIBRATE_PHASE          J0038-2459          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 24      34:18 OBSERVE_TARGET           NGC_253_2           OHp Science setup_1                           1 Subscans    
+ 25      36:28 OBSERVE_TARGET           NGC_253_3           OHp Science setup_1                           1 Subscans    
+ 26      37:37 CALIBRATE_PHASE          J0038-2459          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 27      38:03 CALIBRATE_ATMOSPHERE     NGC_253_1           ATM_OHp Science setup_1                       4 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 28      38:35 OBSERVE_TARGET           NGC_253_1           OHp Science setup_1                           1 Subscans    
+ 29      40:46 OBSERVE_TARGET           NGC_253_2           OHp Science setup_1                           1 Subscans    
+ 30      41:24 CALIBRATE_PHASE          J0038-2459          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 31      41:56 OBSERVE_TARGET           NGC_253_3           OHp Science setup_1                           1 Subscans    
+ 32      44:06 OBSERVE_TARGET           NGC_253_1           OHp Science setup_1                           1 Subscans    
+ 33      45:15 CALIBRATE_PHASE          J0038-2459          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 34      45:41 CALIBRATE_ATMOSPHERE     NGC_253_1           ATM_OHp Science setup_1                       4 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 35      46:13 OBSERVE_TARGET           NGC_253_2           OHp Science setup_1                           1 Subscans    
+ 36      46:52 CALIBRATE_PHASE          J0038-2459          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 37      47:24 OBSERVE_CHECK_SOURCE     J0058-3234          OHp Science setup_1                           1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 38      48:33 OBSERVE_TARGET           NGC_253_3           OHp Science setup_1                           1 Subscans    
+ 39      50:43 CALIBRATE_PHASE          J0038-2459          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 40      51:15 OBSERVE_TARGET           NGC_253_1           OHp Science setup_1                           1 Subscans    
+ 41      53:19 CALIBRATE_ATMOSPHERE     NGC_253_1           ATM_OHp Science setup_1                       4 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 42      53:52 OBSERVE_TARGET           NGC_253_2           OHp Science setup_1                           1 Subscans    
+ 43      55:00 CALIBRATE_PHASE          J0038-2459          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 44      55:33 OBSERVE_TARGET           NGC_253_3           OHp Science setup_1                           1 Subscans    
+ 45      57:43 OBSERVE_TARGET           NGC_253_1           OHp Science setup_1                           1 Subscans    
+ 46      58:52 CALIBRATE_PHASE          J0038-2459          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 47      59:24 OBSERVE_TARGET           NGC_253_2           OHp Science setup_1                           1 Subscans    
+ 48      61:28 CALIBRATE_ATMOSPHERE     NGC_253_1           ATM_OHp Science setup_1                       4 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 49      62:00 OBSERVE_TARGET           NGC_253_3           OHp Science setup_1                           1 Subscans    
+ 50      63:09 CALIBRATE_PHASE          J0038-2459          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 51      63:41 OBSERVE_CHECK_SOURCE     J0058-3234          OHp Science setup_1                           1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 52      64:50 OBSERVE_TARGET           NGC_253_1           OHp Science setup_1                           1 Subscans    
+ 53      65:29 OBSERVE_TARGET           NGC_253_2           OHp Science setup_1                           1 Subscans    
+ 54      67:08 CALIBRATE_PHASE          J0038-2459          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 55      67:40 OBSERVE_TARGET           NGC_253_2           OHp Science setup_1                           1 Subscans    
+ 56      68:19 CALIBRATE_PHASE          J0038-2459          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 57      68:51 CALIBRATE_POINTING       J2334+0736          Band 7 pointing                              10 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 58      70:13 CALIBRATE_ATMOSPHERE     J2253+1608          ATM_Band 7 299.2 GHz reference setup          3 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 59      70:33 CALIBRATE_ATMOSPHERE     J2253+1608          ATM_OHp Science setup_1                       3 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 60      70:59 CALIBRATE_DIFFGAIN       J2253+1608          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 61      71:18 CALIBRATE_DIFFGAIN       J2253+1608          OHp Science setup_1                           1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 62      71:50 CALIBRATE_DIFFGAIN       J2253+1608          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 63      72:10 CALIBRATE_DIFFGAIN       J2253+1608          OHp Science setup_1                           1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 64      72:42 CALIBRATE_DIFFGAIN       J2253+1608          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 65      73:02 CALIBRATE_DIFFGAIN       J2253+1608          OHp Science setup_1                           1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 66      73:34 CALIBRATE_DIFFGAIN       J2253+1608          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 67      73:54 CALIBRATE_DIFFGAIN       J2253+1608          OHp Science setup_1                           1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 68      74:14 CALIBRATE_DIFFGAIN       J2253+1608          Band 7 299.2 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+
+Source Summary:
+	Source Name                            coordinates              Integration Time
+------------------------------------------------------------
+	J2253+1608            Long  343.49 Lat  16.15 ICRS                          1:40
+	J2253+1608            Long  343.49 Lat  16.15 ICRS                         21:17
+	J2253+1608            Long  343.49 Lat  16.15 ICRS                          6:08
+	J0058-3234            Long   14.51 Lat -32.57 ICRS                          1:40
+	J0038-2459            Long    9.56 Lat -24.98 ICRS                          5:19
+	NGC_253_1             Long   11.89 Lat -25.29 ICRS                         10:14
+	J0058-3234            Long   14.51 Lat -32.57 ICRS                          3:04
+	NGC_253_2             Long   11.89 Lat -25.29 ICRS                          8:11
+	NGC_253_3             Long   11.89 Lat -25.29 ICRS                          8:11
+	J2334+0736            Long  353.55 Lat   7.61 ICRS                          1:20
+
+Spectral Summary:
+	Spectral Name                     Integration Time
+------------------------------------------------------------
+	Band 7 pointing                               4:42
+	  BB_1: 292.220GHz (    : USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_1: 292.220GHz SQLD
+	  BB_2: 292.220GHz (    : USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_2: 292.220GHz SQLD
+	  BB_3: 306.262GHz (    : USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_3: 306.262GHz SQLD
+	  BB_4: 306.262GHz (    : USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_4: 306.262GHz SQLD
+	ATM_Band 7 299.2 GHz reference setup                          1:26
+	  BB_1: 292.262GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=1) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=0)
+	  BB_1: 292.262GHz SQLD
+	  BB_2: 294.220GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=1) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=0)
+	  BB_2: 294.220GHz SQLD
+	  BB_3: 304.262GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=0) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_3: 304.262GHz SQLD
+	  BB_4: 306.220GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=0) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_4: 306.220GHz SQLD
+	Band 7 299.2 GHz reference setup                         12:04
+	  BB_1: 292.262GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=1) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=0)
+	  BB_1: 292.262GHz SQLD
+	  BB_2: 294.220GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=1) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=0)
+	  BB_2: 294.220GHz SQLD
+	  BB_3: 304.262GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=0) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=1)
+	  BB_3: 304.262GHz SQLD
+	  BB_4: 306.220GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=0) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=1)
+	  BB_4: 306.220GHz SQLD
+	ATM_OHp Science setup_1                          3:04
+	  BB_1: 903.091GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=1) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_1: 903.091GHz SQLD
+	  BB_2: 904.979GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=1) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_2: 904.979GHz SQLD
+	  BB_3: 906.638GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=1) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_3: 906.638GHz SQLD
+	  BB_4: 908.335GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=1) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_4: 908.335GHz SQLD
+	OHp Science setup_1                          45:52
+	  BB_1: 903.091GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=1) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=1)
+	  BB_1: 903.091GHz SQLD
+	  BB_2: 904.979GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=1) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=1)
+	  BB_2: 904.979GHz SQLD
+	  BB_3: 906.638GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=1) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=1)
+	  BB_3: 906.638GHz SQLD
+	  BB_4: 908.335GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=1) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=1)
+	  BB_4: 908.335GHz SQLD

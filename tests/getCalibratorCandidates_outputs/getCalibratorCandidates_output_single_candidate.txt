@@ -1,0 +1,73 @@
+It appears PYTHONPATH has already been tweaked
+It appears PYTHONPATH has already been tweaked
+# Trying to get the next transit epoch... [date=2026-02-20 00:00:00]
+[PERFORMANCE] setupSimulatedArray    0.058 [sec]
+2026-02-24 06:31:04	INFO	MeasIERS::fillMeas(MeasIERS::Files, Double) 	Requested JD 61095.3 is outside the range of the IERS (Earth axis data) table.
+2026-02-24 06:31:04	INFO	MeasIERS::fillMeas(MeasIERS::Files, Double) +	Calculations will proceed with less precision
+# Doppler correction performed
+[PERFORMANCE] loadSB    0.227 [sec]
+  Previous transit time      = 2026/02/19 19:20:49
+  Next transit time          = 2026/02/20 19:16:53
+Loaded 'Observation' package from '/users/ahirota/src_c12/ObservingModes/src/Observation'
+# Loading SB...
+# Performing doppler correction...
+2026-02-24T06:31:04 [OSS/CalibratorCatalog] Array name = ""
+2026-02-24T06:31:04 [CONTROL/OSS/SourceCatalogRetriever] LOCATION='OSS-SCO' => server='asa.alma.cl'
+2026-02-24T06:31:04 [OSS/CalibratorCatalog] arrayTypeName = c43-3
+2026-02-24T06:31:04 [OSS/ArraySensitivityCalculator] [ArraySensitivityCalculator] configDir=/alma/ACS-current/ACSSW/intlist/SCCB-1290/config/SKY.SPE0001.trim
+2026-02-24T06:31:04 [OSS/ArraySensitivityCalculator] configDir=/alma/ACS-current/ACSSW/intlist/SCCB-1290/config
+2026-02-24T06:31:04 [OSS/ArraySensitivityCalculator] [setAntennaNumbers] N_12m=43 N_7m=0 N_TP=0
+# SB parameters
+   Representative target = 'ScienceTarget on NGC_253_1 at 903.091 GHz ref=topo'
+   Source Name           = NGC_253_1
+   Source Ra, Dec        = ( 11.9, -25.3) [degrees]
+   Source Az, El         = (102.4,  76.1) [degrees]
+# Calibrator search parameters
+   Calibration type      = bandpass
+   Query center          = ( 11.9, -25.3) [degrees]
+   Search radius         = 23.0 [degrees]
+   Spectral setup name   = 'OHp Science setup_1'
+   SIMULATION_EPOCH      = '2026-02-20 18:16:53.929288'
+# Performing calibrator query...
+2026-02-24T06:31:04 [OSS/CalibratorCatalog] [getDatetime] epoch="2026-02-20T18:16:53" datetime="2026-02-20 18:16:53"
+908.336 GHz 0.847 +    0.028
+908.336 GHz 0.847 +    0.028
+# DONE! (took 0.80 seconds)
+[ICT-11887] repFreq=908.374 [GHz]
+[ICT-11887] max (worst) sensitivity for SPWs close to the representative frequency (908.374 GHz) is 251.70 [mJy]
+[ICT-11887] median sensitivity = 73.30 [mJy] (@903.091 GHz)
+[ICT-11887] Adopt the max sensitivity instead of the median as the flux density threshold
+----------------------------
+  tint=1800.0 [sec] el=45.0 [deg] npol=1 required SNR=50 mode=antenna N(12.0m)=43
+  |SPW|       f|   BW| nch| tau0|   Tsys|  PWV|  sigma|min Flux|
+  |   |     GHz|  GHz|    |     |      K|   mm|    mJy|     mJy|
+  |  0| 892.354|1.875|3840| 0.75| 2380.4|0.472|  53.33| 2666.70|
+  |  1| 903.091|1.875|3840| 0.93| 3202.9|0.472|  73.30| 3664.92|
+  |  2| 890.466|1.875|3840| 0.71| 2229.7|0.472|  49.77| 2488.61|
+  |  3| 904.980|1.875|3840| 1.07| 3991.7|0.472|  91.69| 4584.59|
+  |  4| 888.807|1.875|3840| 0.71| 2218.7|0.472|  49.37| 2468.33|
+  |  5| 906.638|1.875|3840| 1.25| 5355.0|0.472| 123.41| 6170.70|
+  |  6| 887.110|1.875|3840| 0.72| 2270.7|0.472|  50.36| 2517.80|
+  |  7| 908.336|1.875|3840| 1.73|10884.7|0.472| 251.70|12585.23|
+
+Threshold=3.776 ExpectedMax=0.390 PhaseOneCheck=False
+
+
+  -> Listing ranked candidate list... [bandpass ra=  11.888 dec= -25.289 radius=23.0 SPW_average=OFF]
+iTry=0
+|SourceName (and type IDs)   |    Az|    El|  eRa| eDec|  Spec Index|  RCQ|Nobs|LastDate|Estimated Flux| SNR (1800 sec)|  Sep|isObs|   fShadow| fRes|dDays|   UVmax|  UVmin|Score|   Reason|
+|                            |   deg|   deg|  mas|  mas|            |     |    |        |            Jy|               |  deg|     |          |     |     | kLambda|kLambda|     |         |
+|[J0006-0623] 1,24,25,49,64  |  15.0|  72.8| 0.10| 0.10|-0.45+- 0.01| 3.19| 153|20260219| 0.847+- 0.028|    3.4+-   0.1| 21.3| True|0.00(0.00)|  0.0|    1| -1831.0|    nan|-1.00|       TW|
+
+  6th col: Assumed spectral index
+  7th col: Reduced chi-square for sp index fitting
+  9th col: Last observation date
+ 10th col: Estimated flux error / estimated flux
+ 12th col: Angular separation to query center
+ 13th col: Observable or not
+ 14th col: Fractional number of shadowed antennas
+ 19th col: Score. valid range is from 0 to 5.
+----------------------------
+
+There is no available source registered in the Source Catalog
+

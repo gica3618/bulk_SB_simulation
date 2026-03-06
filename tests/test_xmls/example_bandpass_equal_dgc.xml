@@ -1,0 +1,1464 @@
+<sbl:SchedBlock xmlns:ent="Alma/CommonEntity"
+    xmlns:val="Alma/ValueTypes" xmlns:prp="Alma/ObsPrep/ObsProposal"
+    xmlns:orv="Alma/ObsPrep/ObsReview"
+    xmlns:ps="Alma/ObsPrep/ProjectStatus"
+    xmlns:oat="Alma/ObsPrep/ObsAttachment"
+    xmlns:prj="Alma/ObsPrep/ObsProject"
+    xmlns:sbl="Alma/ObsPrep/SchedBlock"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="Alma/Obsprep/ObsAttachment" status="Ready" schemaVersion="13"
+    revision="35" almatype="APDM::SchedBlock" modeType="User" xsi:type="sbl:SchedBlock">
+    <prj:name>HerBS-37_a_10_7M</prj:name>
+    <prj:note>Note to AoD: Band 10 B2B SB paired with Band 7, please follow specific workflow</prj:note>
+    <prj:ObsUnitControl arrayRequested="SEVEN-M">
+        <prj:maximumTime unit="h">12.0</prj:maximumTime>
+        <prj:userPriority>0</prj:userPriority>
+        <prj:estimatedExecutionTime unit="h">20.72666666666666</prj:estimatedExecutionTime>
+        <prj:tacPriority>0</prj:tacPriority>
+        <prj:aggregatedExecutionCount>1</prj:aggregatedExecutionCount>
+        <prj:CalibrationRequirements>
+            <prj:pointingAccuracy unit="arcsec">1.0</prj:pointingAccuracy>
+            <prj:bandpassAccuracy>0.1</prj:bandpassAccuracy>
+            <prj:polarizationAccuracy>0.1</prj:polarizationAccuracy>
+        </prj:CalibrationRequirements>
+    </prj:ObsUnitControl>
+    <prj:UnitDependencies>
+        <prj:executionCount>1</prj:executionCount>
+        <prj:delay unit="s">0.0</prj:delay>
+        <prj:expression></prj:expression>
+        <prj:margin unit="s">0.0</prj:margin>
+    </prj:UnitDependencies>
+    <prj:ObsProjectRef entityId="uid://A001/X37fd/Xc9b"
+        entityTypeName="ObsProject" documentVersion="1"/>
+    <sbl:SchedBlockEntity entityId="uid://A001/X38b5/X1f"
+        entityIdEncrypted="-- id encryption not implemented --"
+        entityTypeName="SchedBlock" schemaVersion="13"
+        documentVersion="1" timestamp="2026-02-18T05:33:56.142"/>
+    <sbl:SBStatusRef entityId="uid://A001/X38b5/X24"
+        entityTypeName="SBStatus" documentVersion="1"/>
+    <sbl:ObsUnitSetRef entityId="uid://A001/X38b5/X1f"
+        partId="X1300349949" entityTypeName="ObsProject" documentVersion="1"/>
+    <sbl:standardMode>true</sbl:standardMode>
+    <sbl:modeName>BandToBand Interferometry</sbl:modeName>
+    <sbl:pIName>kcorneil1223</sbl:pIName>
+    <sbl:expertParameter>
+        <val:Keyword>ElLimit</val:Keyword>
+        <val:Value>20.0</val:Value>
+    </sbl:expertParameter>
+    <sbl:expertParameter>
+        <val:Keyword>MaxPointingSeparation</val:Keyword>
+        <val:Value>25.0</val:Value>
+    </sbl:expertParameter>
+    <sbl:expertParameter>
+        <val:Keyword>SourceCycleTime</val:Keyword>
+        <val:Value>0</val:Value>
+    </sbl:expertParameter>
+    <sbl:expertParameter>
+        <val:Keyword>onSourceATM</val:Keyword>
+        <val:Value>1</val:Value>
+    </sbl:expertParameter>
+    <sbl:SpectralSpec entityPartId="X343585213"
+        almatype="APDM::AbstractInstrumentSpec"
+        switchingType="NO_SWITCHING" receiverType="TSB">
+        <sbl:name>B7 Pointing Setup</sbl:name>
+        <sbl:BLCorrelatorConfiguration aPCDataSets="AP_UNCORRECTED"
+            cAM="NORMAL" lOOffsettingMode="NONE">
+            <sbl:integrationDuration unit="s">2.016</sbl:integrationDuration>
+            <sbl:channelAverageDuration unit="s">1.008</sbl:channelAverageDuration>
+            <sbl:enable180DegreeWalshFunction>true</sbl:enable180DegreeWalshFunction>
+            <sbl:enable90DegreeWalshFunction>false</sbl:enable90DegreeWalshFunction>
+            <sbl:dumpDuration unit="s">1.008</sbl:dumpDuration>
+            <sbl:BLBaseBandConfig dataProducts="CROSS_AND_AUTO">
+                <sbl:BaseBandSpecificationRef
+                    entityId="uid://A001/X38b5/X1f" partId="X1331467183"
+                    entityTypeName="SchedBlock" documentVersion="1"/>
+                <sbl:BLSpectralWindow sideBand="LSB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="GHz">3.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>1</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-1</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">2.0</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>128</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>0</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>6</sbl:startChannel>
+                        <sbl:numberChannels>115</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+            </sbl:BLBaseBandConfig>
+            <sbl:BLBaseBandConfig dataProducts="CROSS_AND_AUTO">
+                <sbl:BaseBandSpecificationRef
+                    entityId="uid://A001/X38b5/X1f" partId="X914992663"
+                    entityTypeName="SchedBlock" documentVersion="1"/>
+                <sbl:BLSpectralWindow sideBand="LSB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="GHz">3.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>1</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-1</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">2.0</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>128</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>0</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>6</sbl:startChannel>
+                        <sbl:numberChannels>115</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+            </sbl:BLBaseBandConfig>
+            <sbl:BLBaseBandConfig dataProducts="CROSS_AND_AUTO">
+                <sbl:BaseBandSpecificationRef
+                    entityId="uid://A001/X38b5/X1f" partId="X1496137453"
+                    entityTypeName="SchedBlock" documentVersion="1"/>
+                <sbl:BLSpectralWindow sideBand="USB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="GHz">3.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>1</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-1</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">2.0</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>128</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>0</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>6</sbl:startChannel>
+                        <sbl:numberChannels>115</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+            </sbl:BLBaseBandConfig>
+            <sbl:BLBaseBandConfig dataProducts="CROSS_AND_AUTO">
+                <sbl:BaseBandSpecificationRef
+                    entityId="uid://A001/X38b5/X1f" partId="X1177986905"
+                    entityTypeName="SchedBlock" documentVersion="1"/>
+                <sbl:BLSpectralWindow sideBand="USB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="GHz">3.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>1</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-1</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">2.0</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>128</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>0</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>6</sbl:startChannel>
+                        <sbl:numberChannels>115</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+            </sbl:BLBaseBandConfig>
+        </sbl:BLCorrelatorConfiguration>
+        <sbl:FrequencySetup receiverBand="ALMA_RB_07" dopplerReference="topo">
+            <sbl:restFrequency unit="GHz">290.0</sbl:restFrequency>
+            <sbl:transitionName>Pointing</sbl:transitionName>
+            <sbl:lO1Frequency unit="GHz">290.0</sbl:lO1Frequency>
+            <sbl:isUserSpecifiedLO1>false</sbl:isUserSpecifiedLO1>
+            <sbl:hasHardwareSetup>false</sbl:hasHardwareSetup>
+            <sbl:floog unit="GHz">0.0</sbl:floog>
+            <sbl:tuneHigh>false</sbl:tuneHigh>
+            <sbl:BaseBandSpecification entityPartId="X1331467183"
+                almatype="APDM::BaseBandSpecification"
+                baseBandName="BB_1" sideBandPreference="NONE">
+                <sbl:centerFrequency unit="GHz">283.0000000001</sbl:centerFrequency>
+                <sbl:frequencySwitching>false</sbl:frequencySwitching>
+                <sbl:lO2Frequency unit="GHz">9.979</sbl:lO2Frequency>
+                <sbl:weighting>100.0</sbl:weighting>
+                <sbl:useUSB>true</sbl:useUSB>
+                <sbl:use12GHzFilter>false</sbl:use12GHzFilter>
+                <sbl:imageCenterFrequency unit="GHz">0.0</sbl:imageCenterFrequency>
+            </sbl:BaseBandSpecification>
+            <sbl:BaseBandSpecification entityPartId="X914992663"
+                almatype="APDM::BaseBandSpecification"
+                baseBandName="BB_2" sideBandPreference="NONE">
+                <sbl:centerFrequency unit="GHz">284.9999999999</sbl:centerFrequency>
+                <sbl:frequencySwitching>false</sbl:frequencySwitching>
+                <sbl:lO2Frequency unit="GHz">8.021</sbl:lO2Frequency>
+                <sbl:weighting>100.0</sbl:weighting>
+                <sbl:useUSB>true</sbl:useUSB>
+                <sbl:use12GHzFilter>false</sbl:use12GHzFilter>
+                <sbl:imageCenterFrequency unit="GHz">0.0</sbl:imageCenterFrequency>
+            </sbl:BaseBandSpecification>
+            <sbl:BaseBandSpecification entityPartId="X1496137453"
+                almatype="APDM::BaseBandSpecification"
+                baseBandName="BB_3" sideBandPreference="NONE">
+                <sbl:centerFrequency unit="GHz">295.0000000001</sbl:centerFrequency>
+                <sbl:frequencySwitching>false</sbl:frequencySwitching>
+                <sbl:lO2Frequency unit="GHz">8.021</sbl:lO2Frequency>
+                <sbl:weighting>100.0</sbl:weighting>
+                <sbl:useUSB>true</sbl:useUSB>
+                <sbl:use12GHzFilter>false</sbl:use12GHzFilter>
+                <sbl:imageCenterFrequency unit="GHz">0.0</sbl:imageCenterFrequency>
+            </sbl:BaseBandSpecification>
+            <sbl:BaseBandSpecification entityPartId="X1177986905"
+                almatype="APDM::BaseBandSpecification"
+                baseBandName="BB_4" sideBandPreference="NONE">
+                <sbl:centerFrequency unit="GHz">296.9999999999</sbl:centerFrequency>
+                <sbl:frequencySwitching>false</sbl:frequencySwitching>
+                <sbl:lO2Frequency unit="GHz">9.979</sbl:lO2Frequency>
+                <sbl:weighting>100.0</sbl:weighting>
+                <sbl:useUSB>true</sbl:useUSB>
+                <sbl:use12GHzFilter>false</sbl:use12GHzFilter>
+                <sbl:imageCenterFrequency unit="GHz">0.0</sbl:imageCenterFrequency>
+            </sbl:BaseBandSpecification>
+        </sbl:FrequencySetup>
+    </sbl:SpectralSpec>
+    <sbl:SpectralSpec entityPartId="X546752968"
+        almatype="APDM::AbstractInstrumentSpec"
+        switchingType="NO_SWITCHING" receiverType="DSB">
+        <sbl:name>OIII 3P1-3P0 Science setup_1</sbl:name>
+        <sbl:BLCorrelatorConfiguration aPCDataSets="AP_UNCORRECTED"
+            cAM="NORMAL" lOOffsettingMode="NONE">
+            <sbl:integrationDuration unit="s">6.144</sbl:integrationDuration>
+            <sbl:channelAverageDuration unit="s">2.048</sbl:channelAverageDuration>
+            <sbl:enable180DegreeWalshFunction>true</sbl:enable180DegreeWalshFunction>
+            <sbl:enable90DegreeWalshFunction>true</sbl:enable90DegreeWalshFunction>
+            <sbl:dumpDuration unit="ms">2048.0</sbl:dumpDuration>
+            <sbl:BLBaseBandConfig dataProducts="CROSS_AND_AUTO">
+                <sbl:BaseBandSpecificationRef
+                    entityId="uid://A001/X38b5/X1f" partId="X1282932926"
+                    entityTypeName="SchedBlock" documentVersion="1"/>
+                <sbl:BLSpectralWindow sideBand="LSB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="MHz">3000.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>2</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-1</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">1.875</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>3840</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>2</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:groupingIdentifier>X127/X91211559/X1068</sbl:groupingIdentifier>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>0</sbl:startChannel>
+                        <sbl:numberChannels>3840</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+                <sbl:BLSpectralWindow sideBand="USB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="MHz">3000.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>2</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-2</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">1.875</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>3840</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>1</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>true</sbl:representativeWindow>
+                    <sbl:groupingIdentifier>X127/X91211559/X1061</sbl:groupingIdentifier>
+                    <sbl:SpectralLine>
+                        <sbl:restFrequency unit="GHz">3393.006244</sbl:restFrequency>
+                        <sbl:transition>OIII_3P1-3P0</sbl:transition>
+                        <sbl:spatalogId>6586045</sbl:spatalogId>
+                    </sbl:SpectralLine>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>0</sbl:startChannel>
+                        <sbl:numberChannels>3840</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+            </sbl:BLBaseBandConfig>
+            <sbl:BLBaseBandConfig dataProducts="CROSS_AND_AUTO">
+                <sbl:BaseBandSpecificationRef
+                    entityId="uid://A001/X38b5/X1f" partId="X548269298"
+                    entityTypeName="SchedBlock" documentVersion="1"/>
+                <sbl:BLSpectralWindow sideBand="LSB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="MHz">3000.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>2</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-1</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">1.875</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>3840</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>2</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:groupingIdentifier>X127/X91211559/X1069</sbl:groupingIdentifier>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>0</sbl:startChannel>
+                        <sbl:numberChannels>3840</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+                <sbl:BLSpectralWindow sideBand="USB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="MHz">3000.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>2</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-2</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">1.875</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>3840</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>1</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:groupingIdentifier>X127/X91211559/X1061</sbl:groupingIdentifier>
+                    <sbl:SpectralLine>
+                        <sbl:restFrequency unit="GHz">3399.7264006984265</sbl:restFrequency>
+                        <sbl:transition>_Continuum_1</sbl:transition>
+                        <sbl:spatalogId>0</sbl:spatalogId>
+                    </sbl:SpectralLine>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>0</sbl:startChannel>
+                        <sbl:numberChannels>3840</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+            </sbl:BLBaseBandConfig>
+            <sbl:BLBaseBandConfig dataProducts="CROSS_AND_AUTO">
+                <sbl:BaseBandSpecificationRef
+                    entityId="uid://A001/X38b5/X1f" partId="X2017715047"
+                    entityTypeName="SchedBlock" documentVersion="1"/>
+                <sbl:BLSpectralWindow sideBand="LSB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="MHz">3000.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>2</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-1</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">1.875</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>3840</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>2</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:groupingIdentifier>X127/X91211559/X1070</sbl:groupingIdentifier>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>0</sbl:startChannel>
+                        <sbl:numberChannels>3840</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+                <sbl:BLSpectralWindow sideBand="USB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="MHz">3000.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>2</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-2</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">1.875</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>3840</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>1</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:groupingIdentifier>X127/X91211559/X1071</sbl:groupingIdentifier>
+                    <sbl:SpectralLine>
+                        <sbl:restFrequency unit="GHz">3406.457815543327</sbl:restFrequency>
+                        <sbl:transition>Continuum_2</sbl:transition>
+                        <sbl:spatalogId>0</sbl:spatalogId>
+                    </sbl:SpectralLine>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>0</sbl:startChannel>
+                        <sbl:numberChannels>3840</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+            </sbl:BLBaseBandConfig>
+            <sbl:BLBaseBandConfig dataProducts="CROSS_AND_AUTO">
+                <sbl:BaseBandSpecificationRef
+                    entityId="uid://A001/X38b5/X1f" partId="X1491187991"
+                    entityTypeName="SchedBlock" documentVersion="1"/>
+                <sbl:BLSpectralWindow sideBand="LSB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="MHz">3000.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>2</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-1</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">1.875</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>3840</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>2</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:groupingIdentifier>X127/X91211559/X1071</sbl:groupingIdentifier>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>0</sbl:startChannel>
+                        <sbl:numberChannels>3840</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+                <sbl:BLSpectralWindow sideBand="USB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="MHz">3000.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>2</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-2</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">1.875</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>3840</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>1</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:groupingIdentifier>X127/X91211559/X1071</sbl:groupingIdentifier>
+                    <sbl:SpectralLine>
+                        <sbl:restFrequency unit="GHz">3413.189230388227</sbl:restFrequency>
+                        <sbl:transition>Continuum_3</sbl:transition>
+                        <sbl:spatalogId>0</sbl:spatalogId>
+                    </sbl:SpectralLine>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>0</sbl:startChannel>
+                        <sbl:numberChannels>3840</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+            </sbl:BLBaseBandConfig>
+        </sbl:BLCorrelatorConfiguration>
+        <sbl:FrequencySetup receiverBand="ALMA_RB_10" dopplerReference="rest">
+            <sbl:restFrequency unit="GHz">3413.189230388227</sbl:restFrequency>
+            <sbl:transitionName>OIII_3P1-3P0</sbl:transitionName>
+            <sbl:lO1Frequency unit="GHz">932.346555405</sbl:lO1Frequency>
+            <sbl:isUserSpecifiedLO1>false</sbl:isUserSpecifiedLO1>
+            <sbl:hasHardwareSetup>false</sbl:hasHardwareSetup>
+            <sbl:floog unit="GHz">0.0</sbl:floog>
+            <sbl:tuneHigh>false</sbl:tuneHigh>
+            <sbl:BaseBandSpecification entityPartId="X1282932926"
+                almatype="APDM::BaseBandSpecification"
+                baseBandName="BB_1" sideBandPreference="NONE">
+                <sbl:centerFrequency unit="GHz">3393.0062440000934</sbl:centerFrequency>
+                <sbl:frequencySwitching>false</sbl:frequencySwitching>
+                <sbl:lO2Frequency unit="GHz">8.2085</sbl:lO2Frequency>
+                <sbl:weighting>100.0</sbl:weighting>
+                <sbl:useUSB>true</sbl:useUSB>
+                <sbl:use12GHzFilter>false</sbl:use12GHzFilter>
+                <sbl:imageCenterFrequency unit="GHz">0.0</sbl:imageCenterFrequency>
+            </sbl:BaseBandSpecification>
+            <sbl:BaseBandSpecification entityPartId="X548269298"
+                almatype="APDM::BaseBandSpecification"
+                baseBandName="BB_2" sideBandPreference="NONE">
+                <sbl:centerFrequency unit="GHz">3399.7264006984265</sbl:centerFrequency>
+                <sbl:frequencySwitching>false</sbl:frequencySwitching>
+                <sbl:lO2Frequency unit="GHz">10.0415</sbl:lO2Frequency>
+                <sbl:weighting>100.0</sbl:weighting>
+                <sbl:useUSB>true</sbl:useUSB>
+                <sbl:use12GHzFilter>false</sbl:use12GHzFilter>
+                <sbl:imageCenterFrequency unit="GHz">0.0</sbl:imageCenterFrequency>
+            </sbl:BaseBandSpecification>
+            <sbl:BaseBandSpecification entityPartId="X2017715047"
+                almatype="APDM::BaseBandSpecification"
+                baseBandName="BB_3" sideBandPreference="NONE">
+                <sbl:centerFrequency unit="GHz">3406.457815543327</sbl:centerFrequency>
+                <sbl:frequencySwitching>false</sbl:frequencySwitching>
+                <sbl:lO2Frequency unit="GHz">11.913444595000122</sbl:lO2Frequency>
+                <sbl:weighting>100.0</sbl:weighting>
+                <sbl:useUSB>true</sbl:useUSB>
+                <sbl:use12GHzFilter>false</sbl:use12GHzFilter>
+                <sbl:imageCenterFrequency unit="GHz">0.0</sbl:imageCenterFrequency>
+            </sbl:BaseBandSpecification>
+            <sbl:BaseBandSpecification entityPartId="X1491187991"
+                almatype="APDM::BaseBandSpecification"
+                baseBandName="BB_4" sideBandPreference="NONE">
+                <sbl:centerFrequency unit="GHz">3413.189230388227</sbl:centerFrequency>
+                <sbl:frequencySwitching>false</sbl:frequencySwitching>
+                <sbl:lO2Frequency unit="GHz">13.773444595</sbl:lO2Frequency>
+                <sbl:weighting>100.0</sbl:weighting>
+                <sbl:useUSB>true</sbl:useUSB>
+                <sbl:use12GHzFilter>false</sbl:use12GHzFilter>
+                <sbl:imageCenterFrequency unit="GHz">0.0</sbl:imageCenterFrequency>
+            </sbl:BaseBandSpecification>
+        </sbl:FrequencySetup>
+    </sbl:SpectralSpec>
+    <sbl:SpectralSpec entityPartId="X1163388757"
+        almatype="APDM::AbstractInstrumentSpec"
+        switchingType="NO_SWITCHING" receiverType="TSB">
+        <sbl:name>B7 B2B Cal Setup</sbl:name>
+        <sbl:BLCorrelatorConfiguration aPCDataSets="AP_UNCORRECTED"
+            cAM="NORMAL" lOOffsettingMode="TWO_LOS">
+            <sbl:integrationDuration unit="s">6.144</sbl:integrationDuration>
+            <sbl:channelAverageDuration unit="s">2.048</sbl:channelAverageDuration>
+            <sbl:enable180DegreeWalshFunction>true</sbl:enable180DegreeWalshFunction>
+            <sbl:enable90DegreeWalshFunction>false</sbl:enable90DegreeWalshFunction>
+            <sbl:dumpDuration unit="ms">2048.0</sbl:dumpDuration>
+            <sbl:BLBaseBandConfig dataProducts="CROSS_AND_AUTO">
+                <sbl:BaseBandSpecificationRef
+                    entityId="uid://A001/X38b5/X1f" partId="X1546935384"
+                    entityTypeName="SchedBlock" documentVersion="1"/>
+                <sbl:BLSpectralWindow sideBand="LSB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="MHz">3000.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>2</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-1</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">1.875</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>3840</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>0</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>0</sbl:startChannel>
+                        <sbl:numberChannels>3840</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+            </sbl:BLBaseBandConfig>
+            <sbl:BLBaseBandConfig dataProducts="CROSS_AND_AUTO">
+                <sbl:BaseBandSpecificationRef
+                    entityId="uid://A001/X38b5/X1f" partId="X178639018"
+                    entityTypeName="SchedBlock" documentVersion="1"/>
+                <sbl:BLSpectralWindow sideBand="LSB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="MHz">3000.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>2</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-1</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">1.875</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>3840</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>0</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>0</sbl:startChannel>
+                        <sbl:numberChannels>3840</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+            </sbl:BLBaseBandConfig>
+            <sbl:BLBaseBandConfig dataProducts="CROSS_AND_AUTO">
+                <sbl:BaseBandSpecificationRef
+                    entityId="uid://A001/X38b5/X1f" partId="X1343197243"
+                    entityTypeName="SchedBlock" documentVersion="1"/>
+                <sbl:BLSpectralWindow sideBand="USB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="MHz">3000.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>2</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-1</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">1.875</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>3840</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>0</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>0</sbl:startChannel>
+                        <sbl:numberChannels>3840</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+            </sbl:BLBaseBandConfig>
+            <sbl:BLBaseBandConfig dataProducts="CROSS_AND_AUTO">
+                <sbl:BaseBandSpecificationRef
+                    entityId="uid://A001/X38b5/X1f" partId="X1369814329"
+                    entityTypeName="SchedBlock" documentVersion="1"/>
+                <sbl:BLSpectralWindow sideBand="USB"
+                    windowFunction="HANNING" polnProducts="XX,YY" correlationBits="BITS_2x2">
+                    <sbl:centerFrequency unit="MHz">3000.0</sbl:centerFrequency>
+                    <sbl:spectralAveragingFactor>2</sbl:spectralAveragingFactor>
+                    <sbl:name>SW-1</sbl:name>
+                    <sbl:effectiveBandwidth unit="GHz">1.875</sbl:effectiveBandwidth>
+                    <sbl:effectiveNumberOfChannels>3840</sbl:effectiveNumberOfChannels>
+                    <sbl:associatedSpectralWindowNumberInPair>0</sbl:associatedSpectralWindowNumberInPair>
+                    <sbl:useThisSpectralWindow>true</sbl:useThisSpectralWindow>
+                    <sbl:representativeWindow>false</sbl:representativeWindow>
+                    <sbl:correlationNyquistOversampling>false</sbl:correlationNyquistOversampling>
+                    <sbl:quantizationCorrection>true</sbl:quantizationCorrection>
+                    <sbl:ChannelAverageRegion>
+                        <sbl:startChannel>0</sbl:startChannel>
+                        <sbl:numberChannels>3840</sbl:numberChannels>
+                    </sbl:ChannelAverageRegion>
+                </sbl:BLSpectralWindow>
+            </sbl:BLBaseBandConfig>
+        </sbl:BLCorrelatorConfiguration>
+        <sbl:FrequencySetup receiverBand="ALMA_RB_07" dopplerReference="topo">
+            <sbl:restFrequency unit="GHz">343.5</sbl:restFrequency>
+            <sbl:transitionName>SkyCont(343.5_GHz)</sbl:transitionName>
+            <sbl:lO1Frequency unit="GHz">343.5</sbl:lO1Frequency>
+            <sbl:isUserSpecifiedLO1>false</sbl:isUserSpecifiedLO1>
+            <sbl:hasHardwareSetup>false</sbl:hasHardwareSetup>
+            <sbl:floog unit="GHz">0.0</sbl:floog>
+            <sbl:tuneHigh>false</sbl:tuneHigh>
+            <sbl:BaseBandSpecification entityPartId="X1546935384"
+                almatype="APDM::BaseBandSpecification"
+                baseBandName="BB_1" sideBandPreference="NONE">
+                <sbl:centerFrequency unit="GHz">336.5000000001</sbl:centerFrequency>
+                <sbl:frequencySwitching>false</sbl:frequencySwitching>
+                <sbl:lO2Frequency unit="GHz">9.979</sbl:lO2Frequency>
+                <sbl:weighting>100.0</sbl:weighting>
+                <sbl:useUSB>true</sbl:useUSB>
+                <sbl:use12GHzFilter>false</sbl:use12GHzFilter>
+                <sbl:imageCenterFrequency unit="GHz">0.0</sbl:imageCenterFrequency>
+            </sbl:BaseBandSpecification>
+            <sbl:BaseBandSpecification entityPartId="X178639018"
+                almatype="APDM::BaseBandSpecification"
+                baseBandName="BB_2" sideBandPreference="NONE">
+                <sbl:centerFrequency unit="GHz">338.4999999999</sbl:centerFrequency>
+                <sbl:frequencySwitching>false</sbl:frequencySwitching>
+                <sbl:lO2Frequency unit="GHz">8.021</sbl:lO2Frequency>
+                <sbl:weighting>100.0</sbl:weighting>
+                <sbl:useUSB>true</sbl:useUSB>
+                <sbl:use12GHzFilter>false</sbl:use12GHzFilter>
+                <sbl:imageCenterFrequency unit="GHz">0.0</sbl:imageCenterFrequency>
+            </sbl:BaseBandSpecification>
+            <sbl:BaseBandSpecification entityPartId="X1343197243"
+                almatype="APDM::BaseBandSpecification"
+                baseBandName="BB_3" sideBandPreference="NONE">
+                <sbl:centerFrequency unit="GHz">348.5000000001</sbl:centerFrequency>
+                <sbl:frequencySwitching>false</sbl:frequencySwitching>
+                <sbl:lO2Frequency unit="GHz">8.021</sbl:lO2Frequency>
+                <sbl:weighting>100.0</sbl:weighting>
+                <sbl:useUSB>true</sbl:useUSB>
+                <sbl:use12GHzFilter>false</sbl:use12GHzFilter>
+                <sbl:imageCenterFrequency unit="GHz">0.0</sbl:imageCenterFrequency>
+            </sbl:BaseBandSpecification>
+            <sbl:BaseBandSpecification entityPartId="X1369814329"
+                almatype="APDM::BaseBandSpecification"
+                baseBandName="BB_4" sideBandPreference="NONE">
+                <sbl:centerFrequency unit="GHz">350.4999999999</sbl:centerFrequency>
+                <sbl:frequencySwitching>false</sbl:frequencySwitching>
+                <sbl:lO2Frequency unit="GHz">9.979</sbl:lO2Frequency>
+                <sbl:weighting>100.0</sbl:weighting>
+                <sbl:useUSB>true</sbl:useUSB>
+                <sbl:use12GHzFilter>false</sbl:use12GHzFilter>
+                <sbl:imageCenterFrequency unit="GHz">0.0</sbl:imageCenterFrequency>
+            </sbl:BaseBandSpecification>
+        </sbl:FrequencySetup>
+    </sbl:SpectralSpec>
+    <sbl:FieldSource entityPartId="X930813213"
+        almatype="APDM::FieldSource" solarSystemObject="Unspecified">
+        <sbl:sourceCoordinates system="ICRS" type="ABSOLUTE">
+            <val:longitude unit="deg">0.0</val:longitude>
+            <val:latitude unit="deg">0.0</val:latitude>
+            <val:fieldName>None</val:fieldName>
+        </sbl:sourceCoordinates>
+        <sbl:sourceName>query</sbl:sourceName>
+        <sbl:sourceVelocity referenceSystem="lsrk" dopplerCalcType="RADIO">
+            <val:centerVelocity unit="km/s">0.0</val:centerVelocity>
+        </sbl:sourceVelocity>
+        <sbl:sourceEphemeris></sbl:sourceEphemeris>
+        <sbl:pMRA unit="mas/yr">0.0</sbl:pMRA>
+        <sbl:pMDec unit="mas/yr">0.0</sbl:pMDec>
+        <sbl:nonSiderealMotion>false</sbl:nonSiderealMotion>
+        <sbl:parallax unit="mas">0.0</sbl:parallax>
+        <sbl:name>Pointing Template (Cal Group)</sbl:name>
+        <sbl:isQuery>true</sbl:isQuery>
+        <sbl:PointingPattern type="point">
+            <sbl:phaseCenterCoordinates system="ICRS" type="RELATIVE">
+                <val:longitude unit="arcmin">0.0</val:longitude>
+                <val:latitude unit="arcmin">0.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:phaseCenterCoordinates>
+            <sbl:isMosaic>false</sbl:isMosaic>
+        </sbl:PointingPattern>
+        <sbl:QuerySource intendedUse="Phase">
+            <sbl:queryCenter system="ICRS" type="ABSOLUTE">
+                <val:longitude unit="arcsec">1236046.5</val:longitude>
+                <val:latitude unit="arcsec">58124.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:queryCenter>
+            <sbl:searchRadius unit="deg">15.0</sbl:searchRadius>
+            <sbl:minFrequency unit="GHz">0.0</sbl:minFrequency>
+            <sbl:maxFrequency unit="GHz">0.0</sbl:maxFrequency>
+            <sbl:minFlux unit="Jy">0.0</sbl:minFlux>
+            <sbl:maxFlux unit="Jy">0.0</sbl:maxFlux>
+            <sbl:minTimeSinceObserved unit="d">0.0</sbl:minTimeSinceObserved>
+            <sbl:maxTimeSinceObserved unit="d">0.0</sbl:maxTimeSinceObserved>
+            <sbl:use>UNDEFINED</sbl:use>
+            <sbl:maxSources>100</sbl:maxSources>
+        </sbl:QuerySource>
+        <sbl:Reference>
+            <sbl:referenceCoordinates system="horizon" type="RELATIVE">
+                <val:longitude unit="arcmin">2.0</val:longitude>
+                <val:latitude unit="arcmin">0.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:referenceCoordinates>
+            <sbl:integrationTime unit="s">4.0</sbl:integrationTime>
+            <sbl:cycleTime unit="h">100.0</sbl:cycleTime>
+            <sbl:subScanDuration unit="s">2.016</sbl:subScanDuration>
+        </sbl:Reference>
+    </sbl:FieldSource>
+    <sbl:FieldSource entityPartId="X425870927"
+        almatype="APDM::FieldSource" solarSystemObject="Unspecified">
+        <sbl:sourceCoordinates system="ICRS" type="ABSOLUTE">
+            <val:longitude unit="deg">0.0</val:longitude>
+            <val:latitude unit="deg">0.0</val:latitude>
+            <val:fieldName>None</val:fieldName>
+        </sbl:sourceCoordinates>
+        <sbl:sourceName>query</sbl:sourceName>
+        <sbl:sourceVelocity referenceSystem="lsrk" dopplerCalcType="RADIO">
+            <val:centerVelocity unit="km/s">0.0</val:centerVelocity>
+        </sbl:sourceVelocity>
+        <sbl:sourceEphemeris></sbl:sourceEphemeris>
+        <sbl:pMRA unit="mas/yr">0.0</sbl:pMRA>
+        <sbl:pMDec unit="mas/yr">0.0</sbl:pMDec>
+        <sbl:nonSiderealMotion>false</sbl:nonSiderealMotion>
+        <sbl:parallax unit="mas">0.0</sbl:parallax>
+        <sbl:name>Pointing Template (Science Group)</sbl:name>
+        <sbl:isQuery>true</sbl:isQuery>
+        <sbl:PointingPattern type="point">
+            <sbl:phaseCenterCoordinates system="ICRS" type="RELATIVE">
+                <val:longitude unit="arcmin">0.0</val:longitude>
+                <val:latitude unit="arcmin">0.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:phaseCenterCoordinates>
+            <sbl:isMosaic>false</sbl:isMosaic>
+        </sbl:PointingPattern>
+        <sbl:QuerySource intendedUse="Phase">
+            <sbl:queryCenter system="ICRS" type="ABSOLUTE">
+                <val:longitude unit="arcsec">1236046.5</val:longitude>
+                <val:latitude unit="arcsec">58124.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:queryCenter>
+            <sbl:searchRadius unit="deg">15.0</sbl:searchRadius>
+            <sbl:minFrequency unit="GHz">0.0</sbl:minFrequency>
+            <sbl:maxFrequency unit="GHz">0.0</sbl:maxFrequency>
+            <sbl:minFlux unit="Jy">0.0</sbl:minFlux>
+            <sbl:maxFlux unit="Jy">0.0</sbl:maxFlux>
+            <sbl:minTimeSinceObserved unit="d">0.0</sbl:minTimeSinceObserved>
+            <sbl:maxTimeSinceObserved unit="d">0.0</sbl:maxTimeSinceObserved>
+            <sbl:use>UNDEFINED</sbl:use>
+            <sbl:maxSources>100</sbl:maxSources>
+        </sbl:QuerySource>
+        <sbl:Reference>
+            <sbl:referenceCoordinates system="horizon" type="RELATIVE">
+                <val:longitude unit="arcmin">2.0</val:longitude>
+                <val:latitude unit="arcmin">0.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:referenceCoordinates>
+            <sbl:integrationTime unit="s">4.0</sbl:integrationTime>
+            <sbl:cycleTime unit="h">100.0</sbl:cycleTime>
+            <sbl:subScanDuration unit="s">2.016</sbl:subScanDuration>
+        </sbl:Reference>
+    </sbl:FieldSource>
+    <sbl:FieldSource entityPartId="X1371106592"
+        almatype="APDM::FieldSource" solarSystemObject="Unspecified">
+        <sbl:sourceCoordinates system="ICRS" type="ABSOLUTE">
+            <val:longitude unit="deg">0.0</val:longitude>
+            <val:latitude unit="deg">0.0</val:latitude>
+            <val:fieldName>None</val:fieldName>
+        </sbl:sourceCoordinates>
+        <sbl:sourceName>query</sbl:sourceName>
+        <sbl:sourceVelocity referenceSystem="lsrk" dopplerCalcType="RADIO">
+            <val:centerVelocity unit="km/s">0.0</val:centerVelocity>
+        </sbl:sourceVelocity>
+        <sbl:sourceEphemeris></sbl:sourceEphemeris>
+        <sbl:pMRA unit="mas/yr">0.0</sbl:pMRA>
+        <sbl:pMDec unit="mas/yr">0.0</sbl:pMDec>
+        <sbl:nonSiderealMotion>false</sbl:nonSiderealMotion>
+        <sbl:parallax unit="mas">0.0</sbl:parallax>
+        <sbl:name>Phase</sbl:name>
+        <sbl:isQuery>true</sbl:isQuery>
+        <sbl:PointingPattern type="point">
+            <sbl:phaseCenterCoordinates system="ICRS" type="RELATIVE">
+                <val:longitude unit="arcmin">0.0</val:longitude>
+                <val:latitude unit="arcmin">0.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:phaseCenterCoordinates>
+            <sbl:isMosaic>false</sbl:isMosaic>
+        </sbl:PointingPattern>
+        <sbl:QuerySource intendedUse="Phase">
+            <sbl:queryCenter system="ICRS" type="ABSOLUTE">
+                <val:longitude unit="arcsec">1236046.5</val:longitude>
+                <val:latitude unit="arcsec">58124.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:queryCenter>
+            <sbl:searchRadius unit="deg">8.0</sbl:searchRadius>
+            <sbl:minFrequency unit="GHz">0.0</sbl:minFrequency>
+            <sbl:maxFrequency unit="GHz">0.0</sbl:maxFrequency>
+            <sbl:minFlux unit="Jy">0.0</sbl:minFlux>
+            <sbl:maxFlux unit="Jy">0.0</sbl:maxFlux>
+            <sbl:minTimeSinceObserved unit="d">0.0</sbl:minTimeSinceObserved>
+            <sbl:maxTimeSinceObserved unit="d">0.0</sbl:maxTimeSinceObserved>
+            <sbl:use>UNDEFINED</sbl:use>
+            <sbl:maxSources>100</sbl:maxSources>
+        </sbl:QuerySource>
+        <sbl:Reference>
+            <sbl:referenceCoordinates system="horizon" type="RELATIVE">
+                <val:longitude unit="arcmin">2.0</val:longitude>
+                <val:latitude unit="arcmin">0.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:referenceCoordinates>
+            <sbl:integrationTime unit="s">4.0</sbl:integrationTime>
+            <sbl:cycleTime unit="h">100.0</sbl:cycleTime>
+            <sbl:subScanDuration unit="s">6.144</sbl:subScanDuration>
+        </sbl:Reference>
+    </sbl:FieldSource>
+    <sbl:FieldSource entityPartId="X1305685178"
+        almatype="APDM::FieldSource" solarSystemObject="Unspecified">
+        <sbl:sourceCoordinates system="ICRS" type="ABSOLUTE">
+            <val:longitude unit="deg">344.322096342</val:longitude>
+            <val:latitude unit="deg">7.72008405833</val:latitude>
+            <val:fieldName>None</val:fieldName>
+        </sbl:sourceCoordinates>
+        <sbl:sourceName>J2257+0743</sbl:sourceName>
+        <sbl:sourceVelocity referenceSystem="lsrk" dopplerCalcType="RADIO">
+            <val:centerVelocity unit="km/s">0.0</val:centerVelocity>
+        </sbl:sourceVelocity>
+        <sbl:sourceEphemeris></sbl:sourceEphemeris>
+        <sbl:pMRA unit="mas/yr">0.0</sbl:pMRA>
+        <sbl:pMDec unit="mas/yr">0.0</sbl:pMDec>
+        <sbl:nonSiderealMotion>false</sbl:nonSiderealMotion>
+        <sbl:parallax unit="mas">0.0</sbl:parallax>
+        <sbl:name>Check</sbl:name>
+        <sbl:isQuery>false</sbl:isQuery>
+        <sbl:PointingPattern type="point">
+            <sbl:phaseCenterCoordinates system="ICRS" type="RELATIVE">
+                <val:longitude unit="arcmin">0.0</val:longitude>
+                <val:latitude unit="arcmin">0.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:phaseCenterCoordinates>
+            <sbl:isMosaic>false</sbl:isMosaic>
+        </sbl:PointingPattern>
+        <sbl:Reference>
+            <sbl:referenceCoordinates system="horizon" type="RELATIVE">
+                <val:longitude unit="arcmin">2.0</val:longitude>
+                <val:latitude unit="arcmin">0.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:referenceCoordinates>
+            <sbl:integrationTime unit="s">4.0</sbl:integrationTime>
+            <sbl:cycleTime unit="h">100.0</sbl:cycleTime>
+            <sbl:subScanDuration unit="s">6.144</sbl:subScanDuration>
+        </sbl:Reference>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">463.341</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">0.17613</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">42.827494</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">0.33</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">343.5</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">0.396</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">226.90800000000002</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">0.45878</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">8.600000000000001</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">0.509</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">103.5</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">0.63</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">169.012</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">0.64293</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">91.5</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">0.662</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+    </sbl:FieldSource>
+    <sbl:FieldSource entityPartId="X534809660"
+        almatype="APDM::FieldSource" solarSystemObject="Unspecified">
+        <sbl:sourceCoordinates system="ICRS" type="ABSOLUTE">
+            <val:longitude unit="deg">343.490616425</val:longitude>
+            <val:latitude unit="deg">16.1482113528</val:latitude>
+            <val:fieldName>None</val:fieldName>
+        </sbl:sourceCoordinates>
+        <sbl:sourceName>J2253+1608</sbl:sourceName>
+        <sbl:sourceVelocity referenceSystem="lsrk" dopplerCalcType="RADIO">
+            <val:centerVelocity unit="km/s">0.0</val:centerVelocity>
+        </sbl:sourceVelocity>
+        <sbl:sourceEphemeris></sbl:sourceEphemeris>
+        <sbl:pMRA unit="mas/yr">0.0</sbl:pMRA>
+        <sbl:pMDec unit="mas/yr">0.0</sbl:pMDec>
+        <sbl:nonSiderealMotion>false</sbl:nonSiderealMotion>
+        <sbl:parallax unit="mas">0.0</sbl:parallax>
+        <sbl:name>Bandpass</sbl:name>
+        <sbl:isQuery>false</sbl:isQuery>
+        <sbl:PointingPattern type="point">
+            <sbl:phaseCenterCoordinates system="ICRS" type="RELATIVE">
+                <val:longitude unit="arcmin">0.0</val:longitude>
+                <val:latitude unit="arcmin">0.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:phaseCenterCoordinates>
+            <sbl:isMosaic>false</sbl:isMosaic>
+        </sbl:PointingPattern>
+        <sbl:Reference>
+            <sbl:referenceCoordinates system="horizon" type="RELATIVE">
+                <val:longitude unit="arcmin">2.0</val:longitude>
+                <val:latitude unit="arcmin">0.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:referenceCoordinates>
+            <sbl:integrationTime unit="s">4.0</sbl:integrationTime>
+            <sbl:cycleTime unit="h">100.0</sbl:cycleTime>
+            <sbl:subScanDuration unit="s">6.144</sbl:subScanDuration>
+        </sbl:Reference>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">674.0</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">3.24</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">410.5</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">4.45616</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">808.49</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">5.1721</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">337.5</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">6.36</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">172.876</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">8.26143</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">233.00000000000003</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">8.61</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">155.0</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">10.1395</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">103.5</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">13.01</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">91.5</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">13.39</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">38.02</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">15.34</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+    </sbl:FieldSource>
+    <sbl:FieldSource entityPartId="X1187477972"
+        almatype="APDM::FieldSource" solarSystemObject="Unspecified">
+        <sbl:sourceCoordinates system="ICRS" type="ABSOLUTE">
+            <val:longitude unit="deg">343.490616425</val:longitude>
+            <val:latitude unit="deg">16.1482113528</val:latitude>
+            <val:fieldName>None</val:fieldName>
+        </sbl:sourceCoordinates>
+        <sbl:sourceName>J2253+1608</sbl:sourceName>
+        <sbl:sourceVelocity referenceSystem="lsrk" dopplerCalcType="RADIO">
+            <val:centerVelocity unit="km/s">0.0</val:centerVelocity>
+        </sbl:sourceVelocity>
+        <sbl:sourceEphemeris></sbl:sourceEphemeris>
+        <sbl:pMRA unit="mas/yr">0.0</sbl:pMRA>
+        <sbl:pMDec unit="mas/yr">0.0</sbl:pMDec>
+        <sbl:nonSiderealMotion>false</sbl:nonSiderealMotion>
+        <sbl:parallax unit="mas">0.0</sbl:parallax>
+        <sbl:name>DGC</sbl:name>
+        <sbl:isQuery>false</sbl:isQuery>
+        <sbl:PointingPattern type="point">
+            <sbl:phaseCenterCoordinates system="ICRS" type="RELATIVE">
+                <val:longitude unit="arcmin">0.0</val:longitude>
+                <val:latitude unit="arcmin">0.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:phaseCenterCoordinates>
+            <sbl:isMosaic>false</sbl:isMosaic>
+        </sbl:PointingPattern>
+        <sbl:Reference>
+            <sbl:referenceCoordinates system="horizon" type="RELATIVE">
+                <val:longitude unit="arcmin">2.0</val:longitude>
+                <val:latitude unit="arcmin">0.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:referenceCoordinates>
+            <sbl:integrationTime unit="s">4.0</sbl:integrationTime>
+            <sbl:cycleTime unit="h">100.0</sbl:cycleTime>
+            <sbl:subScanDuration unit="s">6.144</sbl:subScanDuration>
+        </sbl:Reference>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">674.0</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">3.24</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">410.5</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">4.45616</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">808.49</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">5.1721</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">337.5</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">6.36</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">172.876</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">8.26143</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">233.00000000000003</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">8.61</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">155.0</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">10.1395</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">103.5</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">13.01</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">91.5</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">13.39</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+        <sbl:SourceProperty>
+            <sbl:sourceFrequency unit="GHz">38.02</sbl:sourceFrequency>
+            <sbl:sourceFluxI unit="Jy">15.34</sbl:sourceFluxI>
+            <sbl:sourceDiameter unit="arcsec">0.0</sbl:sourceDiameter>
+            <sbl:sourceFluxQ unit="Jy">0.0</sbl:sourceFluxQ>
+            <sbl:sourceFluxU unit="Jy">0.0</sbl:sourceFluxU>
+            <sbl:sourceFluxV unit="Jy">0.0</sbl:sourceFluxV>
+            <sbl:dateOfMeasurement></sbl:dateOfMeasurement>
+        </sbl:SourceProperty>
+    </sbl:FieldSource>
+    <sbl:FieldSource entityPartId="X230084590"
+        almatype="APDM::FieldSource" solarSystemObject="Unspecified">
+        <sbl:sourceCoordinates system="ICRS" type="ABSOLUTE">
+            <val:longitude unit="deg">351.59625</val:longitude>
+            <val:latitude unit="deg">-34.44555555555556</val:latitude>
+            <val:fieldName>None</val:fieldName>
+        </sbl:sourceCoordinates>
+        <sbl:sourceName>HerBS-37</sbl:sourceName>
+        <sbl:sourceVelocity referenceSystem="lsrk" dopplerCalcType="RADIO">
+            <val:centerVelocity unit="km/s">216953.97830947777</val:centerVelocity>
+        </sbl:sourceVelocity>
+        <sbl:sourceEphemeris></sbl:sourceEphemeris>
+        <sbl:pMRA unit="mas/yr">0.0</sbl:pMRA>
+        <sbl:pMDec unit="mas/yr">0.0</sbl:pMDec>
+        <sbl:nonSiderealMotion>false</sbl:nonSiderealMotion>
+        <sbl:parallax unit="mas">0.0</sbl:parallax>
+        <sbl:name>Primary:</sbl:name>
+        <sbl:isQuery>false</sbl:isQuery>
+        <sbl:PointingPattern type="point">
+            <sbl:phaseCenterCoordinates system="ICRS" type="RELATIVE">
+                <val:longitude unit="arcsec">0.0</val:longitude>
+                <val:latitude unit="arcsec">0.0</val:latitude>
+                <val:fieldName>HerBS-37-1</val:fieldName>
+            </sbl:phaseCenterCoordinates>
+            <sbl:isMosaic>false</sbl:isMosaic>
+        </sbl:PointingPattern>
+        <sbl:Reference>
+            <sbl:referenceCoordinates system="horizon" type="RELATIVE">
+                <val:longitude unit="arcmin">2.0</val:longitude>
+                <val:latitude unit="arcmin">0.0</val:latitude>
+                <val:fieldName>None</val:fieldName>
+            </sbl:referenceCoordinates>
+            <sbl:integrationTime unit="s">4.0</sbl:integrationTime>
+            <sbl:cycleTime unit="h">100.0</sbl:cycleTime>
+            <sbl:subScanDuration unit="s">6.144</sbl:subScanDuration>
+        </sbl:Reference>
+    </sbl:FieldSource>
+    <sbl:ObservingGroup>
+        <sbl:index>1</sbl:index>
+        <sbl:name>Calibrators</sbl:name>
+        <sbl:OrderedTarget>
+            <sbl:index>1</sbl:index>
+            <sbl:TargetRef entityId="uid://A001/X38b5/X1f"
+                partId="X1499622105" entityTypeName="SchedBlock" documentVersion="1"/>
+        </sbl:OrderedTarget>
+        <sbl:OrderedTarget>
+            <sbl:index>2</sbl:index>
+            <sbl:TargetRef entityId="uid://A001/X38b5/X1f"
+                partId="X1767352077" entityTypeName="SchedBlock" documentVersion="1"/>
+        </sbl:OrderedTarget>
+        <sbl:OrderedTarget>
+            <sbl:index>3</sbl:index>
+            <sbl:TargetRef entityId="uid://A001/X38b5/X1f"
+                partId="X1287927390" entityTypeName="SchedBlock" documentVersion="1"/>
+        </sbl:OrderedTarget>
+    </sbl:ObservingGroup>
+    <sbl:ObservingGroup>
+        <sbl:index>2</sbl:index>
+        <sbl:name>Science</sbl:name>
+        <sbl:OrderedTarget>
+            <sbl:index>1</sbl:index>
+            <sbl:TargetRef entityId="uid://A001/X38b5/X1f"
+                partId="X1044708788" entityTypeName="SchedBlock" documentVersion="1"/>
+        </sbl:OrderedTarget>
+        <sbl:OrderedTarget>
+            <sbl:index>2</sbl:index>
+            <sbl:TargetRef entityId="uid://A001/X38b5/X1f"
+                partId="X1305037833" entityTypeName="SchedBlock" documentVersion="1"/>
+        </sbl:OrderedTarget>
+        <sbl:OrderedTarget>
+            <sbl:index>3</sbl:index>
+            <sbl:TargetRef entityId="uid://A001/X38b5/X1f"
+                partId="X1148006222" entityTypeName="SchedBlock" documentVersion="1"/>
+        </sbl:OrderedTarget>
+        <sbl:OrderedTarget>
+            <sbl:index>4</sbl:index>
+            <sbl:TargetRef entityId="uid://A001/X38b5/X1f"
+                partId="X1821744208" entityTypeName="SchedBlock" documentVersion="1"/>
+        </sbl:OrderedTarget>
+        <sbl:OrderedTarget>
+            <sbl:index>5</sbl:index>
+            <sbl:TargetRef entityId="uid://A001/X38b5/X1f"
+                partId="X410085267" entityTypeName="SchedBlock" documentVersion="1"/>
+        </sbl:OrderedTarget>
+        <sbl:OrderedTarget>
+            <sbl:index>6</sbl:index>
+            <sbl:TargetRef entityId="uid://A001/X38b5/X1f"
+                partId="X2069516153" entityTypeName="SchedBlock" documentVersion="1"/>
+        </sbl:OrderedTarget>
+        <sbl:mainTargetRef entityId="uid://A001/X38b5/X1f"
+            partId="X2069516153" entityTypeName="SchedBlock" documentVersion="1"/>
+    </sbl:ObservingGroup>
+    <sbl:PointingCalParameters entityPartId="X1409065424"
+        almatype="APDM::ObservingParameters"
+        dataOrigin="CHANNEL_AVERAGE_CROSS" pointingMethod="FIVE_POINT">
+        <sbl:name>PointingCalParameters (Cal Group)</sbl:name>
+        <sbl:cycleTime unit="h">2.0</sbl:cycleTime>
+        <sbl:defaultIntegrationTime unit="s">10.0</sbl:defaultIntegrationTime>
+        <sbl:subScanDuration unit="s">10.08</sbl:subScanDuration>
+        <sbl:forceAtmCal>false</sbl:forceAtmCal>
+        <sbl:forceExecution>false</sbl:forceExecution>
+        <sbl:desiredAccuracy unit="arcsec">10.039568331608217</sbl:desiredAccuracy>
+        <sbl:maximumElapsedTime unit="h">99999.0</sbl:maximumElapsedTime>
+        <sbl:excursion unit="arcsec">10.039568331608217</sbl:excursion>
+    </sbl:PointingCalParameters>
+    <sbl:PointingCalParameters entityPartId="X1891630098"
+        almatype="APDM::ObservingParameters"
+        dataOrigin="CHANNEL_AVERAGE_CROSS" pointingMethod="FIVE_POINT">
+        <sbl:name>PointingCalParameters (Science Group)</sbl:name>
+        <sbl:cycleTime unit="h">2.0</sbl:cycleTime>
+        <sbl:defaultIntegrationTime unit="s">10.0</sbl:defaultIntegrationTime>
+        <sbl:subScanDuration unit="s">10.08</sbl:subScanDuration>
+        <sbl:forceAtmCal>false</sbl:forceAtmCal>
+        <sbl:forceExecution>false</sbl:forceExecution>
+        <sbl:desiredAccuracy unit="arcsec">10.039568331608217</sbl:desiredAccuracy>
+        <sbl:maximumElapsedTime unit="h">99999.0</sbl:maximumElapsedTime>
+        <sbl:excursion unit="arcsec">10.039568331608217</sbl:excursion>
+    </sbl:PointingCalParameters>
+    <sbl:PhaseCalParameters entityPartId="X1277553751"
+        almatype="APDM::ObservingParameters" dataOrigin="CHANNEL_AVERAGE_CROSS">
+        <sbl:name></sbl:name>
+        <sbl:cycleTime unit="min">5.0</sbl:cycleTime>
+        <sbl:defaultIntegrationTime unit="s">60.0</sbl:defaultIntegrationTime>
+        <sbl:subScanDuration unit="s">61.44</sbl:subScanDuration>
+        <sbl:forceAtmCal>false</sbl:forceAtmCal>
+        <sbl:forceExecution>false</sbl:forceExecution>
+    </sbl:PhaseCalParameters>
+    <sbl:CheckSourceCalParameters entityPartId="X809321429"
+        almatype="APDM::ObservingParameters" dataOrigin="CHANNEL_AVERAGE_CROSS">
+        <sbl:name>Check source parameters</sbl:name>
+        <sbl:cycleTime unit="s">1502.56</sbl:cycleTime>
+        <sbl:defaultIntegrationTime unit="s">60.0</sbl:defaultIntegrationTime>
+        <sbl:subScanDuration unit="s">61.44</sbl:subScanDuration>
+        <sbl:forceAtmCal>false</sbl:forceAtmCal>
+        <sbl:forceExecution>false</sbl:forceExecution>
+    </sbl:CheckSourceCalParameters>
+    <sbl:BandpassCalParameters entityPartId="X36941554"
+        almatype="APDM::ObservingParameters" dataOrigin="FULL_RESOLUTION_CROSS">
+        <sbl:name>BandpassCalParameters(B7 B2B Cal Setup)</sbl:name>
+        <sbl:cycleTime unit="h">2.0</sbl:cycleTime>
+        <sbl:defaultIntegrationTime unit="min">5.0</sbl:defaultIntegrationTime>
+        <sbl:subScanDuration unit="s">153.6</sbl:subScanDuration>
+        <sbl:forceAtmCal>false</sbl:forceAtmCal>
+        <sbl:forceExecution>false</sbl:forceExecution>
+        <sbl:desiredAmplitudeAccuracy>5.0</sbl:desiredAmplitudeAccuracy>
+        <sbl:maximumElapsedTime unit="h">99999.0</sbl:maximumElapsedTime>
+        <sbl:desiredPhaseAccuracy unit="arcsec">1.0</sbl:desiredPhaseAccuracy>
+    </sbl:BandpassCalParameters>
+    <sbl:BandpassCalParameters entityPartId="X197073745"
+        almatype="APDM::ObservingParameters" dataOrigin="FULL_RESOLUTION_CROSS">
+        <sbl:name>BandpassCalParameters (OIII 3P1-3P0 Science setup)</sbl:name>
+        <sbl:cycleTime unit="h">2.0</sbl:cycleTime>
+        <sbl:defaultIntegrationTime unit="min">30.0</sbl:defaultIntegrationTime>
+        <sbl:subScanDuration unit="s">153.6</sbl:subScanDuration>
+        <sbl:forceAtmCal>false</sbl:forceAtmCal>
+        <sbl:forceExecution>false</sbl:forceExecution>
+        <sbl:desiredAmplitudeAccuracy>5.0</sbl:desiredAmplitudeAccuracy>
+        <sbl:maximumElapsedTime unit="h">99999.0</sbl:maximumElapsedTime>
+        <sbl:desiredPhaseAccuracy unit="arcsec">1.0</sbl:desiredPhaseAccuracy>
+    </sbl:BandpassCalParameters>
+    <sbl:DGCReferenceCalParameters entityPartId="X1437675053"
+        almatype="APDM::ObservingParameters" dataOrigin="CHANNEL_AVERAGE_CROSS">
+        <sbl:name></sbl:name>
+        <sbl:cycleTime unit="h">99999.0</sbl:cycleTime>
+        <sbl:defaultIntegrationTime unit="s">30.0</sbl:defaultIntegrationTime>
+        <sbl:subScanDuration unit="s">30.72</sbl:subScanDuration>
+        <sbl:forceAtmCal>false</sbl:forceAtmCal>
+        <sbl:forceExecution>false</sbl:forceExecution>
+    </sbl:DGCReferenceCalParameters>
+    <sbl:DGCScienceCalParameters entityPartId="X2144489929"
+        almatype="APDM::ObservingParameters" dataOrigin="CHANNEL_AVERAGE_CROSS">
+        <sbl:name></sbl:name>
+        <sbl:cycleTime unit="h">99999.0</sbl:cycleTime>
+        <sbl:defaultIntegrationTime unit="s">30.0</sbl:defaultIntegrationTime>
+        <sbl:subScanDuration unit="s">30.72</sbl:subScanDuration>
+        <sbl:forceAtmCal>false</sbl:forceAtmCal>
+        <sbl:forceExecution>false</sbl:forceExecution>
+        <sbl:InternalCycleCount>5</sbl:InternalCycleCount>
+        <sbl:ExternalCycleTime unit="min">360.0</sbl:ExternalCycleTime>
+    </sbl:DGCScienceCalParameters>
+    <sbl:ScienceParameters entityPartId="X386386164" almatype="APDM::ObservingParameters">
+        <sbl:name>Science Params</sbl:name>
+        <sbl:representativeBandwidth unit="MHz">312.7307194665899</sbl:representativeBandwidth>
+        <sbl:representativeFrequency unit="GHz">937.5431108099743</sbl:representativeFrequency>
+        <sbl:sensitivityGoal unit="mJy">19.0</sbl:sensitivityGoal>
+        <sbl:integrationTime unit="s">1428.43</sbl:integrationTime>
+        <sbl:subScanDuration unit="s">30.72</sbl:subScanDuration>
+        <sbl:forceAtmCal>false</sbl:forceAtmCal>
+    </sbl:ScienceParameters>
+    <sbl:ObsProcedure>
+        <sbl:obsProcScript>StandardInterferometry.py</sbl:obsProcScript>
+    </sbl:ObsProcedure>
+    <sbl:Preconditions>
+        <prj:baselineCalValid>false</prj:baselineCalValid>
+        <prj:polarizationCalValid>true</prj:polarizationCalValid>
+        <prj:minAllowedHA unit="deg" userUnit="h">-30.0</prj:minAllowedHA>
+        <prj:maxAllowedHA unit="deg" userUnit="h">-11.25</prj:maxAllowedHA>
+        <prj:WeatherConstraints>
+            <prj:maxPWVC unit="mm">0.472</prj:maxPWVC>
+            <prj:seeing unit="arcsec">0.0</prj:seeing>
+            <prj:phaseStability unit="rad">1.0</prj:phaseStability>
+            <prj:maxWindVelocity unit="km/s">0.0</prj:maxWindVelocity>
+        </prj:WeatherConstraints>
+    </sbl:Preconditions>
+    <sbl:SchedBlockControl>
+        <sbl:sBMaximumTime unit="h">2.0</sbl:sBMaximumTime>
+        <sbl:indefiniteRepeat>false</sbl:indefiniteRepeat>
+        <sbl:executionCount>12</sbl:executionCount>
+        <sbl:runQuicklook>true</sbl:runQuicklook>
+    </sbl:SchedBlockControl>
+    <sbl:SchedulingConstraints representativeReceiverBand="ALMA_RB_10">
+        <sbl:representativeFrequency unit="GHz">937.5431108099743</sbl:representativeFrequency>
+        <sbl:minAcceptableAngResolution unit="arcsec">0.0</sbl:minAcceptableAngResolution>
+        <sbl:maxAcceptableAngResolution unit="arcsec">0.0</sbl:maxAcceptableAngResolution>
+        <sbl:dynamicRange>64.61512575996466</sbl:dynamicRange>
+        <sbl:representativeCoordinates system="ICRS" type="ABSOLUTE">
+            <val:longitude unit="deg">351.59625</val:longitude>
+            <val:latitude unit="deg">-34.44555555555556</val:latitude>
+            <val:fieldName>None</val:fieldName>
+        </sbl:representativeCoordinates>
+        <sbl:requiredReceiverBands>ALMA_RB_07</sbl:requiredReceiverBands>
+        <sbl:requiredReceiverBands>ALMA_RB_10</sbl:requiredReceiverBands>
+        <sbl:nominalConfiguration>7M</sbl:nominalConfiguration>
+        <sbl:scienceGoalDesiredResolution unit="arcsec">1.339278541853493</sbl:scienceGoalDesiredResolution>
+        <sbl:scienceGoalLargestAngularScale unit="arcsec">2.0</sbl:scienceGoalLargestAngularScale>
+        <sbl:isSimultaneous>false</sbl:isSimultaneous>
+        <sbl:spectralDynamicRange>9.359881932244846</sbl:spectralDynamicRange>
+        <sbl:spectralDynamicRangeBandwidth unit="MHz">312.7307194665899</sbl:spectralDynamicRangeBandwidth>
+        <sbl:sbRequiresTPAntennas>true</sbl:sbRequiresTPAntennas>
+        <sbl:representativeTargetRef entityId="uid://A001/X38b5/X1f"
+            partId="X2069516153" entityTypeName="SchedBlock" documentVersion="1"/>
+    </sbl:SchedulingConstraints>
+    <sbl:Target entityPartId="X1499622105" almatype="APDM::Target">
+        <sbl:AbstractInstrumentSpecRef entityId="uid://A001/X38b5/X1f"
+            partId="X343585213" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:FieldSourceRef entityId="uid://A001/X38b5/X1f"
+            partId="X930813213" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:ObservingParametersRef entityId="uid://A001/X38b5/X1f"
+            partId="X1409065424" entityTypeName="SchedBlock" documentVersion="1"/>
+    </sbl:Target>
+    <sbl:Target entityPartId="X1044708788" almatype="APDM::Target">
+        <sbl:AbstractInstrumentSpecRef entityId="uid://A001/X38b5/X1f"
+            partId="X343585213" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:FieldSourceRef entityId="uid://A001/X38b5/X1f"
+            partId="X425870927" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:ObservingParametersRef entityId="uid://A001/X38b5/X1f"
+            partId="X1891630098" entityTypeName="SchedBlock" documentVersion="1"/>
+    </sbl:Target>
+    <sbl:Target entityPartId="X1305037833" almatype="APDM::Target">
+        <sbl:AbstractInstrumentSpecRef entityId="uid://A001/X38b5/X1f"
+            partId="X1163388757" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:FieldSourceRef entityId="uid://A001/X38b5/X1f"
+            partId="X1371106592" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:ObservingParametersRef entityId="uid://A001/X38b5/X1f"
+            partId="X1277553751" entityTypeName="SchedBlock" documentVersion="1"/>
+    </sbl:Target>
+    <sbl:Target entityPartId="X1148006222" almatype="APDM::Target">
+        <sbl:AbstractInstrumentSpecRef entityId="uid://A001/X38b5/X1f"
+            partId="X546752968" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:FieldSourceRef entityId="uid://A001/X38b5/X1f"
+            partId="X1305685178" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:ObservingParametersRef entityId="uid://A001/X38b5/X1f"
+            partId="X809321429" entityTypeName="SchedBlock" documentVersion="1"/>
+    </sbl:Target>
+    <sbl:Target entityPartId="X1767352077" almatype="APDM::Target">
+        <sbl:AbstractInstrumentSpecRef entityId="uid://A001/X38b5/X1f"
+            partId="X1163388757" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:FieldSourceRef entityId="uid://A001/X38b5/X1f"
+            partId="X534809660" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:ObservingParametersRef entityId="uid://A001/X38b5/X1f"
+            partId="X36941554" entityTypeName="SchedBlock" documentVersion="1"/>
+    </sbl:Target>
+    <sbl:Target entityPartId="X1287927390" almatype="APDM::Target">
+        <sbl:AbstractInstrumentSpecRef entityId="uid://A001/X38b5/X1f"
+            partId="X546752968" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:FieldSourceRef entityId="uid://A001/X38b5/X1f"
+            partId="X534809660" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:ObservingParametersRef entityId="uid://A001/X38b5/X1f"
+            partId="X197073745" entityTypeName="SchedBlock" documentVersion="1"/>
+    </sbl:Target>
+    <sbl:Target entityPartId="X1821744208" almatype="APDM::Target">
+        <sbl:AbstractInstrumentSpecRef entityId="uid://A001/X38b5/X1f"
+            partId="X1163388757" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:FieldSourceRef entityId="uid://A001/X38b5/X1f"
+            partId="X1187477972" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:ObservingParametersRef entityId="uid://A001/X38b5/X1f"
+            partId="X1437675053" entityTypeName="SchedBlock" documentVersion="1"/>
+    </sbl:Target>
+    <sbl:Target entityPartId="X410085267" almatype="APDM::Target">
+        <sbl:AbstractInstrumentSpecRef entityId="uid://A001/X38b5/X1f"
+            partId="X546752968" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:FieldSourceRef entityId="uid://A001/X38b5/X1f"
+            partId="X1187477972" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:ObservingParametersRef entityId="uid://A001/X38b5/X1f"
+            partId="X2144489929" entityTypeName="SchedBlock" documentVersion="1"/>
+    </sbl:Target>
+    <sbl:Target entityPartId="X2069516153" almatype="APDM::Target">
+        <sbl:AbstractInstrumentSpecRef entityId="uid://A001/X38b5/X1f"
+            partId="X546752968" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:FieldSourceRef entityId="uid://A001/X38b5/X1f"
+            partId="X230084590" entityTypeName="SchedBlock" documentVersion="1"/>
+        <sbl:ObservingParametersRef entityId="uid://A001/X38b5/X1f"
+            partId="X386386164" entityTypeName="SchedBlock" documentVersion="1"/>
+    </sbl:Target>
+    <sbl:TimeAllocationBreakdown>
+        <prp:ExecutiveFraction name="OTHER">
+            <prp:timeFraction>0.0</prp:timeFraction>
+        </prp:ExecutiveFraction>
+        <prp:ExecutiveFraction name="CL">
+            <prp:timeFraction>0.0</prp:timeFraction>
+        </prp:ExecutiveFraction>
+        <prp:ExecutiveFraction name="EA">
+            <prp:timeFraction>1.0</prp:timeFraction>
+        </prp:ExecutiveFraction>
+        <prp:ExecutiveFraction name="EU">
+            <prp:timeFraction>0.0</prp:timeFraction>
+        </prp:ExecutiveFraction>
+        <prp:ExecutiveFraction name="NA">
+            <prp:timeFraction>0.0</prp:timeFraction>
+        </prp:ExecutiveFraction>
+        <prp:ExecutiveFraction name="NA_EA">
+            <prp:timeFraction>0.0</prp:timeFraction>
+        </prp:ExecutiveFraction>
+    </sbl:TimeAllocationBreakdown>
+</sbl:SchedBlock>

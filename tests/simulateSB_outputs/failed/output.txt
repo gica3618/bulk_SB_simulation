@@ -1,0 +1,54 @@
+It appears PYTHONPATH has already been tweaked
+# Trying to get the next transit epoch... [date=2026-02-20 00:00:00]
+[PERFORMANCE] setupSimulatedArray    0.574 [sec]
+2026-02-24 09:01:51	INFO	MeasIERS::fillMeas(MeasIERS::Files, Double) 	Requested JD 61095.4 is outside the range of the IERS (Earth axis data) table.
+2026-02-24 09:01:51	INFO	MeasIERS::fillMeas(MeasIERS::Files, Double) +	Calculations will proceed with less precision
+# Doppler correction performed
+[PERFORMANCE] loadSB    0.527 [sec]
+  Previous transit time      = 2026/02/19 19:20:49
+  Next transit time          = 2026/02/20 19:16:53
+# Setting simulation epoch to '2026-02-20T15:16:53'
+[PERFORMANCE] setupSimulatedArray    0.000 [sec]
+# Loading SB...
+# Doppler correction performed
+[PERFORMANCE] loadSB    0.431 [sec]
+!! -c option [correlator type] not specified.
+Spectral spec has BL configuration -> use BL
+  
+  Representative target      = 'ScienceTarget on NGC_253_1 at 903.092 GHz ref=topo'
+  Source Name                = NGC_253_1
+  Source Ra, Dec             = ( 11.9, -25.3) [degrees]
+  [G2] PhaseCal_1 Ra, Dec    = ( 11.9, -25.3) [degrees] (query)
+  Maximum Executin Time      = 2.00 [hours]
+  Estimated Execution Time   = 1.56 [hours]
+  Max Acceptable Resolution  = 0.150 [arcsec]
+  Min Acceptable Resolution  = 0.330 [arcsec]
+  Observing Script           = 'StandardInterferometry.py'
+  
+
+  Distance from Sun          =  38.924855 [degrees]
+  Distance from Moon         =  32.638965 [degrees]
+
+  Source Az, El [2026-02-20T15:16:53 + 0 hour] = (105.4,  35.5) [degrees]
+  Source Az, El [2026-02-20T15:16:53 + 1 hour] = (102.6,  48.9) [degrees]
+  Source Az, El [2026-02-20T15:16:53 + 2 hour] = (100.8,  62.5) [degrees]
+# Performing OSS simulation 
+StandardInterferometry.py
+# Disabling SessionControl expert parameter
+Traceback (most recent call last):
+  File "/users/ahirota/AIV/science/scripts/R10.4_WORKING/simulateSB.py", line 539, in executeSimulation
+    simulator.execute()
+  File "/users/ahirota/src_ObservingModeSimulation/ObservingModeSimulation/ObservingModeSimulator.py", line 35, in execute
+    exec(compile(scriptSrc, self._script, 'exec'))
+  File "/users/ahirota/src_c12/ObservingModes/src/StandardInterferometry.py", line 271, in <module>
+    currentPWV=currentPWV)
+  File "/users/ahirota/src_c12/ObservingModes/src/Observation/SchedulingBlock.py", line 972, in prepareTargets
+    isFirstExecutionInSession=isFirstExecutionInSession
+  File "/users/ahirota/src_c12/ObservingModes/src/Observation/CalibratorCatalog.py", line 2964, in resolveGroupQueries
+    duration=execDuration)
+  File "/users/ahirota/src_c12/ObservingModes/src/Observation/CalibratorCatalog.py", line 2558, in resolveTargetQueries
+    raise Exception(msgFmt % values)
+Exception: Although 1 source(s) requested, got only 0 for check query.
+
+OSS simulation failed: check log file ('log_2025.1.00378.S_SchedBlock0.xml_OSS.txt')
+
