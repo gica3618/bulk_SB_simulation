@@ -8,6 +8,7 @@ Created on Thu Mar  5 15:37:27 2026
 
 from collections import Counter
 import logging
+from batch_simulations.domain.dsa_ha_policy import DSAHourAnglePolicy
 
 
 class SB:
@@ -28,6 +29,7 @@ class SB:
         self.rep_coord = rep_coord
         self.OT_allowed_HA = OT_allowed_HA
         self.requires_TP = requires_TP
+        self.consistency_checks()
 
     def consistency_checks(self):
         logging.info("making SB consistency checks")
@@ -62,6 +64,9 @@ class SB:
 
     def PolCal_is_hardcoded(self):
         return self.get_PolCal().is_hardcoded
+
+    def get_DSA_HA_limits(self):
+        return DSAHourAnglePolicy.compute(sb=self)
 
     def add_metadata(self,key,value):
         self.metadata[key] = value

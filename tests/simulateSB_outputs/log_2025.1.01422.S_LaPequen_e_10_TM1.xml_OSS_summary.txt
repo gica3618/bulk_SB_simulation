@@ -1,0 +1,185 @@
+Execution Complete: Elapsed Time 57:14
+	State:   SUCCESS
+	Message: None
+	Total of: 49 Scans (95 Subscans)
+
+ 23 Scan Sequences: 
+	Sequence   1 Scans [1]
+	Sequence   2 Scans [3]
+	Sequence   3 Scans [5]
+	Sequence   4 Scans [6]
+	Sequence   5 Scans [9, 10, 11, 12, 13, 14, 15, 16, 17]
+	Sequence   6 Scans [19]
+	Sequence   7 Scans [21]
+	Sequence   8 Scans [22]
+	Sequence   9 Scans [23]
+	Sequence  10 Scans [24]
+	Sequence  11 Scans [25]
+	Sequence  12 Scans [27]
+	Sequence  13 Scans [28]
+	Sequence  14 Scans [29]
+	Sequence  15 Scans [30]
+	Sequence  16 Scans [32]
+	Sequence  17 Scans [33]
+	Sequence  18 Scans [34]
+	Sequence  19 Scans [35]
+	Sequence  20 Scans [36]
+	Sequence  21 Scans [37]
+	Sequence  22 Scans [38]
+	Sequence  23 Scans [41, 42, 43, 44, 45, 46, 47, 48, 49]
+
+Scan Summary:
+  1       0:06 CALIBRATE_POINTING       J1256-0547          Band 5 pointing                              10 Subscans    
+               CALIBRATE_WVR                                                                                            
+  2       1:48 CALIBRATE_ATMOSPHERE     J1256-0547          ATM_Band 5 180.6 GHz reference setup          4 Subscans    
+               CALIBRATE_WVR                                                                                            
+  3       2:20 CALIBRATE_BANDPASS       J1256-0547          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+               CALIBRATE_FLUX                                                                                           
+  4       7:29 CALIBRATE_ATMOSPHERE     J1256-0547          ATM_CII 2P3/2-2P1/2 Science setup_1           4 Subscans    
+               CALIBRATE_WVR                                                                                            
+  5       8:01 CALIBRATE_BANDPASS       J1256-0547          CII 2P3/2-2P1/2 Science setup_1               3 Subscans    
+               CALIBRATE_WVR                                                                                            
+               CALIBRATE_FLUX                                                                                           
+  6      23:30 CALIBRATE_POINTING       J1058+0133          Band 5 pointing                              10 Subscans    
+               CALIBRATE_WVR                                                                                            
+  7      24:12 CALIBRATE_ATMOSPHERE     J1058+0133          ATM_Band 5 180.6 GHz reference setup          3 Subscans    
+               CALIBRATE_WVR                                                                                            
+  8      24:32 CALIBRATE_ATMOSPHERE     J1058+0133          ATM_CII 2P3/2-2P1/2 Science setup_1           3 Subscans    
+               CALIBRATE_WVR                                                                                            
+  9      24:57 CALIBRATE_DIFFGAIN       J1058+0133          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 10      25:17 CALIBRATE_DIFFGAIN       J1058+0133          CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 11      25:49 CALIBRATE_DIFFGAIN       J1058+0133          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 12      26:09 CALIBRATE_DIFFGAIN       J1058+0133          CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 13      26:41 CALIBRATE_DIFFGAIN       J1058+0133          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 14      27:01 CALIBRATE_DIFFGAIN       J1058+0133          CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 15      27:33 CALIBRATE_DIFFGAIN       J1058+0133          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 16      27:53 CALIBRATE_DIFFGAIN       J1058+0133          CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 17      28:13 CALIBRATE_DIFFGAIN       J1058+0133          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 18      28:26 CALIBRATE_ATMOSPHERE     J0948+0022          ATM_Band 5 180.6 GHz reference setup          4 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 19      28:58 CALIBRATE_PHASE          J0948+0022          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 20      29:25 CALIBRATE_ATMOSPHERE     LaPequena_B10_field5ATM_CII 2P3/2-2P1/2 Science setup_1           4 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 21      29:57 OBSERVE_CHECK_SOURCE     J1008+0029          CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 22      31:06 OBSERVE_TARGET           LaPequena_B10_field5CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+ 23      32:45 CALIBRATE_PHASE          J0948+0022          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 24      33:17 OBSERVE_TARGET           LaPequena_B10_field5CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+ 25      36:29 CALIBRATE_PHASE          J0948+0022          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 26      36:55 CALIBRATE_ATMOSPHERE     LaPequena_B10_field5ATM_CII 2P3/2-2P1/2 Science setup_1           4 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 27      37:27 OBSERVE_TARGET           LaPequena_B10_field5CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+ 28      40:08 CALIBRATE_PHASE          J0948+0022          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 29      40:40 OBSERVE_TARGET           LaPequena_B10_field5CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+ 30      43:52 CALIBRATE_PHASE          J0948+0022          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 31      44:18 CALIBRATE_ATMOSPHERE     LaPequena_B10_field5ATM_CII 2P3/2-2P1/2 Science setup_1           4 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 32      44:50 OBSERVE_TARGET           LaPequena_B10_field5CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+ 33      45:59 CALIBRATE_PHASE          J0948+0022          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 34      46:31 OBSERVE_CHECK_SOURCE     J1008+0029          CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 35      47:40 OBSERVE_TARGET           LaPequena_B10_field5CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+ 36      49:51 CALIBRATE_PHASE          J0948+0022          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 37      50:23 OBSERVE_TARGET           LaPequena_B10_field5CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+ 38      52:33 CALIBRATE_PHASE          J0948+0022          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 39      52:59 CALIBRATE_ATMOSPHERE     J1058+0133          ATM_Band 5 180.6 GHz reference setup          3 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 40      53:19 CALIBRATE_ATMOSPHERE     J1058+0133          ATM_CII 2P3/2-2P1/2 Science setup_1           3 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 41      53:45 CALIBRATE_DIFFGAIN       J1058+0133          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 42      54:05 CALIBRATE_DIFFGAIN       J1058+0133          CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 43      54:37 CALIBRATE_DIFFGAIN       J1058+0133          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 44      54:57 CALIBRATE_DIFFGAIN       J1058+0133          CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 45      55:29 CALIBRATE_DIFFGAIN       J1058+0133          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 46      55:49 CALIBRATE_DIFFGAIN       J1058+0133          CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 47      56:21 CALIBRATE_DIFFGAIN       J1058+0133          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 48      56:41 CALIBRATE_DIFFGAIN       J1058+0133          CII 2P3/2-2P1/2 Science setup_1               1 Subscans    
+               CALIBRATE_WVR                                                                                            
+ 49      57:00 CALIBRATE_DIFFGAIN       J1058+0133          Band 5 180.6 GHz reference setup              1 Subscans    
+               CALIBRATE_WVR                                                                                            
+
+Source Summary:
+	Source Name                            coordinates              Integration Time
+------------------------------------------------------------
+	J1256-0547            Long  194.05 Lat  -5.79 ICRS                          1:40
+	J1256-0547            Long  194.05 Lat  -5.79 ICRS                          5:31
+	J1256-0547            Long  194.05 Lat  -5.79 ICRS                         15:46
+	J1058+0133            Long  164.62 Lat   1.57 ICRS                          0:40
+	J1058+0133            Long  164.62 Lat   1.57 ICRS                          6:08
+	J0948+0022            Long  147.24 Lat   0.37 ICRS                          3:41
+	LaPequena_B10_field5  Long  150.13 Lat   2.52 ICRS                         16:35
+	J1008+0029            Long  152.05 Lat   0.50 ICRS                          2:02
+
+Spectral Summary:
+	Spectral Name                     Integration Time
+------------------------------------------------------------
+	Band 5 pointing                               2:21
+	  BB_1: 196.000GHz (    : USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_1: 196.000GHz SQLD
+	  BB_2: 198.000GHz (    : USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_2: 198.000GHz SQLD
+	  BB_3: 208.000GHz (    : USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_3: 208.000GHz SQLD
+	  BB_4: 210.000GHz (    : USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_4: 210.000GHz SQLD
+	ATM_Band 5 180.6 GHz reference setup                          1:26
+	  BB_1: 173.639GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=1) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=0)
+	  BB_1: 173.639GHz SQLD
+	  BB_2: 175.597GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=1) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=0)
+	  BB_2: 175.597GHz SQLD
+	  BB_3: 185.639GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=0) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_3: 185.639GHz SQLD
+	  BB_4: 187.597GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=0) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_4: 187.597GHz SQLD
+	Band 5 180.6 GHz reference setup                         10:26
+	  BB_1: 173.639GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=1) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=0)
+	  BB_1: 173.639GHz SQLD
+	  BB_2: 175.597GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=1) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=0)
+	  BB_2: 175.597GHz SQLD
+	  BB_3: 185.639GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=0) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=1)
+	  BB_3: 185.639GHz SQLD
+	  BB_4: 187.597GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=0) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=1)
+	  BB_4: 187.597GHz SQLD
+	ATM_CII 2P3/2-2P1/2 Science setup_1                          2:15
+	  BB_1: 818.198GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=1) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_1: 818.198GHz SQLD
+	  BB_2: 819.948GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=1) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_2: 819.948GHz SQLD
+	  BB_3: 821.698GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=1) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_3: 821.698GHz SQLD
+	  BB_4: 823.448GHz (SW-1: LSB c:3000.000MHz w:2000.000MHz  128ch use=1) (SW-2: USB c:3000.000MHz w:2000.000MHz  128ch use=1)
+	  BB_4: 823.448GHz SQLD
+	CII 2P3/2-2P1/2 Science setup_1                         35:38
+	  BB_1: 818.198GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=1) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=1)
+	  BB_1: 818.198GHz SQLD
+	  BB_2: 819.948GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=1) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=1)
+	  BB_2: 819.948GHz SQLD
+	  BB_3: 821.698GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=1) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=1)
+	  BB_3: 821.698GHz SQLD
+	  BB_4: 823.448GHz (SW-1: LSB c:3000.000MHz w:1875.000MHz 3840ch use=1) (SW-2: USB c:3000.000MHz w:1875.000MHz 3840ch use=1)
+	  BB_4: 823.448GHz SQLD

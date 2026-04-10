@@ -10,7 +10,7 @@ import pandas as pd
 import logging
 
 
-class SBInputRepository:
+class SBTable:
 
     input_columns = ["sb_uid", "code", "p2g_account", "sbname", "sb_state",
                      "sb_state_flag"]
@@ -22,6 +22,7 @@ class SBInputRepository:
         self.input_filepaths = input_filepaths
         self.array_config_12m = array_config_12m
         self.SB_filter = SB_filter
+        self.read_input()
 
     def determine_12m_array_config_number(self):
         #assuming that the config is something like c43-2 or c43-10
@@ -44,7 +45,7 @@ class SBInputRepository:
         if self.SB_filter is not None:
             data = data[data.apply(self.SB_filter, axis=1)]
             logging.info(f"after filtering, {len(data)} input SBs left")
-        return data
+        self.data = data
 
     def read_12m_input(self):
         filepath = self.input_filepaths["12m"]

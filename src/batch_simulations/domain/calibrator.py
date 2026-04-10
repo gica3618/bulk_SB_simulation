@@ -6,9 +6,7 @@ Created on Wed Jul 24 09:00:06 2024
 @author: gianni
 """
 
-import subprocess
 import logging
-import datetime
 from dataclasses import dataclass
 from typing import Optional
 
@@ -19,8 +17,7 @@ CALIBRATOR_TYPES = {
     "Phase",
     "Check",
     "Amplitude",
-    "DGC",
-}
+    "DGC"}
 calibrator_keywords = {cal:[cal,cal.lower()] for cal in CALIBRATOR_TYPES}
 
 def classify_calibrator(name):
@@ -36,7 +33,8 @@ def classify_calibrator(name):
                          +f"(candidate_cal_types: {candidate_cal_types})")
     return candidate_cal_types[0]
 
-@dataclass(frozen=True)
+
+@dataclass
 class Calibrator:
     name: str # this is something like "Phase", or "Polarization calibrator"
     source_name: str #this can be "query", or something like "J1326-5256"
@@ -46,17 +44,9 @@ class Calibrator:
 
     def __post_init__(self):
         if self.cal_type not in CALIBRATOR_TYPES:
-            raise ValueError(
-                f"Invalid calibrator type '{self.cal_type}'. "
-                f"Must be one of {CALIBRATOR_TYPES}."
-            )
-
+            raise ValueError(f"Invalid calibrator type '{self.cal_type}'. "
+                             +f"Must be one of {CALIBRATOR_TYPES}.")
         if self.is_hardcoded and self.coordinates is None:
-            raise ValueError(
-                "Hardcoded calibrator must have coordinates."
-            )
-
+            raise ValueError("Hardcoded calibrator must have coordinates.")
         if not self.is_hardcoded and self.coordinates is not None:
-            raise ValueError(
-                "Query calibrator must not have coordinates."
-            )
+            raise ValueError("Query calibrator must not have coordinates.")

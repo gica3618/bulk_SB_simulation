@@ -58,9 +58,10 @@ class DSAHourAnglePolicy:
             target_HA_at_max_pol_cal_HA = max_pol_cal_HA - delta_ra
             target_HA_at_max_pol_cal_HA.wrap_at(12*u.hour,inplace=True)
             if target_HA_at_max_pol_cal_HA < min_HA_DSA:
-                raise ValueError("once target becomes observable, Pol Cal is already outside of -3h to -0.5h range")
+                raise ValueError("once target becomes observable, Pol Cal is "
+                                 +"already outside of -3h to -0.5h range")
             #finally, update the min HA considered by DSA
-            min_HA_DSA = Angle(max(min_HA_DSA.hour,target_HA_at_min_pol_cal_HA.hour)*u.hour)
+            min_HA_DSA = max(min_HA_DSA,target_HA_at_min_pol_cal_HA)
             logging.info(f'min HA considered by DSA after checking pol cal: {min_HA_DSA.hour} h')
         if min_HA_DSA >= max_HA_DSA:
             raise RuntimeError("invalid DSA HA limits computed "

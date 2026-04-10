@@ -11,8 +11,8 @@ import logging
 import sys
 from astropy import units as u
 from astropy.coordinates import Angle,SkyCoord
-import calibrator
-from sched_block import SB
+from batch_simulations.domain.calibrator import Calibrator,classify_calibrator
+from batch_simulations.domain.sb import SB
 
 
 class OT_XML():
@@ -111,8 +111,10 @@ class OT_XML():
         ordered_target_partIDs = []
         for obs_group in observing_groups:
             obs_group_name = obs_group.findtext("sbl:name",namespaces=self.namespaces)
-            ordered_targets = obs_group.findall("sbl:OrderedTarget",namespaces=self.namespaces)
-            logging.info(f"Obs Group {obs_group_name} contains {len(ordered_targets)} ordered targets")
+            ordered_targets = obs_group.findall("sbl:OrderedTarget",
+                                                namespaces=self.namespaces)
+            logging.info(f"Obs Group {obs_group_name} contains "
+                         +f"{len(ordered_targets)} ordered targets")
             for ordered_target in ordered_targets:
                 target_ref = ordered_target.find("sbl:TargetRef",namespaces=self.namespaces)
                 ordered_target_partIDs.append(target_ref.get("partId"))
@@ -122,7 +124,8 @@ class OT_XML():
         #find partIDs of the corresponding field sources:
         field_source_ref_partIDs = []
         for ordered_target_partID in ordered_target_partIDs:
-            target = self.find_unique_element(f"sbl:Target[@entityPartId='{ordered_target_partID}']")
+            target = self.find_unique_element(
+                        f"sbl:Target[@entityPartId='{ordered_target_partID}']")
             field_source_ref = target.find("sbl:FieldSourceRef",namespaces=self.namespaces)
             field_source_ref_partIDs.append(field_source_ref.get("partId"))
         #some calibrators (e.g. Pol Cal) appear in both observing groups, so
@@ -133,7 +136,7 @@ class OT_XML():
         field_source = self.find_unique_element(
                            f"sbl:FieldSource[@entityPartId='{field_source_partID}']")
         name = field_source.findtext("sbl:name",namespaces=self.namespaces)
-        cal_type = calibrator.classify_calibrator(name=name)
+        cal_type = classify_calibrator(name=name)
         if cal_type is None:
             return
         source_name = field_source.findtext("sbl:sourceName",namespaces=self.namespaces)
@@ -151,9 +154,8 @@ class OT_XML():
                                  +f"but found RA={coordinates.ra.deg} deg,"
                                  +f" DEC={coordinates.dec.deg} deg")
             coordinates = None
-        return calibrator.Calibrator(
-                             name=name,source_name=source_name,cal_type=cal_type,
-                             is_hardcoded=is_hardcoded,coordinates=coordinates)
+        return Calibrator(name=name,source_name=source_name,cal_type=cal_type,
+                          is_hardcoded=is_hardcoded,coordinates=coordinates)
 
     def read_calibrators_from_observing_groups(self):
         #sometimes there are e.g. several PolCals. therefore I use the observing
@@ -182,16 +184,13 @@ class BuildSBFromXML:
     def build(xml_filepath):
         xml = OT_XML(xml_filepath)
         metadata = {"note_to_AoD":xml.get_NotetoAoD()}
-        sb =  SB(
-            metadata=metadata,
-            calibrators=xml.read_calibrators_from_observing_groups(),
-            mode_name=xml.read_modeName(),
-            nominal_configs=xml.get_nominal_configurations(),
-            rep_coord=xml.get_representative_coordinates(),
-            OT_allowed_HA = xml.read_allowed_HA(),
-            requires_TP=xml.read_RequiresTPAntenna())
-        sb.consistency_checks()
-        return sb
+        return  SB(metadata=metadata,
+                   calibrators=xml.read_calibrators_from_observing_groups(),
+                   mode_name=xml.read_modeName(),
+                   nominal_configs=xml.get_nominal_configurations(),
+                   rep_coord=xml.get_representative_coordinates(),
+                   OT_allowed_HA = xml.read_allowed_HA(),
+                   requires_TP=xml.read_RequiresTPAntenna())
 
 
 if __name__ == "__main__":
