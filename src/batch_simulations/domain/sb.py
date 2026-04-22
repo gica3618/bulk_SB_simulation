@@ -32,7 +32,6 @@ class SB:
         self.consistency_checks()
 
     def consistency_checks(self):
-        logging.info("making SB consistency checks")
         cal_type_counts = Counter(self.cal_types)
         for cal_type,count in cal_type_counts.items():
             if count > 1:
@@ -46,6 +45,7 @@ class SB:
             raise ValueError("PolCal not hardcoded")
         if (not self.is_Polarisation) and self.has_at_least_one_PolCal():
             raise ValueError("SB is not Polarisation, but PolCal is present")
+        logging.info("SB passed consistency checks")
 
     def has_no_PolCal(self):
         return ("Polarization" not in self.cal_types)
@@ -64,6 +64,9 @@ class SB:
 
     def PolCal_is_hardcoded(self):
         return self.get_PolCal().is_hardcoded
+
+    def any_calibrator_hardcoded(self):
+        return any([c.is_hardcoded for c in self.calibrators])
 
     def get_DSA_HA_limits(self):
         return DSAHourAnglePolicy.compute(sb=self)

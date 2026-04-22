@@ -48,5 +48,3 @@ class Calibrator:
                              +f"Must be one of {CALIBRATOR_TYPES}.")
         if self.is_hardcoded and self.coordinates is None:
             raise ValueError("Hardcoded calibrator must have coordinates.")
-        if not self.is_hardcoded and self.coordinates is not None:
-            raise ValueError("Query calibrator must not have coordinates.")

@@ -23,9 +23,6 @@ def test_calibrator():
         Calibrator(name="test", source_name="query", cal_type="Bandpass123",
                    is_hardcoded=False,coordinates=None)
     with pytest.raises(ValueError):
-        Calibrator(name="test", source_name="query", cal_type="Bandpass",
-                   is_hardcoded=False,coordinates=coord)
-    with pytest.raises(ValueError):
         Calibrator(name="test", source_name="Jirgendwas", cal_type="Bandpass",
                    is_hardcoded=True,coordinates=None)
 

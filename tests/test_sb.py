@@ -116,6 +116,12 @@ class TestSB:
         with pytest.raises(RuntimeError):
             sb.PolCal_is_hardcoded()
 
+    def test_any_calibrator_is_harcoded(self):
+        sb = self.generate_sb("example_polarisation_2023.1.00013.S.xml")
+        assert sb.any_calibrator_hardcoded()
+        sb = self.generate_sb("2025.1.01279.S_general_SB.xml")
+        assert not sb.any_calibrator_hardcoded()
+
     def test_DSA_HA_limits(self):
         sb = self.generate_sb("2025.1.01279.S_general_SB.xml")
         assert sb.get_DSA_HA_limits() == DSAHourAnglePolicy.compute(sb)

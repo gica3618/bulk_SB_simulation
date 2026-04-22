@@ -10,6 +10,7 @@ from batch_simulations.infrastructure.sb_table import SBTable
 from pathlib import Path
 import pytest
 import pandas as pd
+import tempfile
 
 
 class TestSBTable:
@@ -67,6 +68,50 @@ class TestSBTable:
                == sorted(list(self.data12m[data_selection_12m]["sb_uid"])
                          + list(self.data7m["SB UID"]))
         assert sorted(read_data.columns) == sorted(SBTable.input_columns)
+
+    def test_consistency_check_SB_UID(self,monkeypatch):
+        #check that a normal tables work fine:
+        all_sb_uids = pd.concat([self.data12m["sb_uid"],self.data7m["SB UID"]])
+        assert not all_sb_uids.duplicated().any()
+        table = SBTable(input_filepaths=self.input_filepaths,array_config_12m="c43-4",
+                        SB_filter=None)
+        #now a table with duplicated SB UIDs:
+        duplicated_uid_data = table.data.copy()
+        duplicated_uid_data.at[1,"sb_uid"] = duplicated_uid_data.at[0,"sb_uid"]
+        table.data = duplicated_uid_data
+        with pytest.raises(ValueError):
+            table.check_data_consistency()
+        #check that __init__ also fails if UIDs are duplicated:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            filename = Path("12m_data_duplicated_uids.csv")
+            filepath = tmp_dir / filename
+            duplicated_uid_data.to_csv(filepath)
+            def read_input(x):
+                x.data = duplicated_uid_data
+            monkeypatch.setattr(SBTable,"read_input",read_input)
+            with pytest.raises(ValueError):
+                SBTable(input_filepaths={"12m":filepath,"7m":None},
+                        array_config_12m="c43-5",SB_filter=None)
+
+    def test_check_consistency_empty_state(self,monkeypatch):
+        table = SBTable(input_filepaths=self.input_filepaths,array_config_12m="c43-4",
+                        SB_filter=None)
+        invalid_data = table.data.copy()
+        invalid_data.at[0,"sb_state"] = pd.NA
+        table.data = invalid_data
+        with pytest.raises(ValueError):
+            table.check_data_consistency()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            filename = Path("invalid_data.csv")
+            filepath = tmp_dir / filename
+            invalid_data.to_csv(filepath)
+            def read_input(x):
+                x.data = invalid_data
+            monkeypatch.setattr(SBTable,"read_input",read_input)
+            with pytest.raises(ValueError):
+                SBTable(input_filepaths={"12m":filepath,"7m":None},
+                        array_config_12m="c43-5",SB_filter=None)
+        
 
     def test_filter_p2g(self):
         p2g = "gianni"

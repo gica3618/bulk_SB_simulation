@@ -148,12 +148,14 @@ class OT_XML():
         coord_element = field_source.find('sbl:sourceCoordinates',
                                           namespaces=self.namespaces)
         coordinates = self.read_coordinates(coord_element=coord_element)
-        if is_query:
-            if coordinates.ra.deg != 0 or coordinates.dec.deg != 0:
-                raise ValueError("expected query calibrator of have coordinates RA=0, DEC=0,"
-                                 +f"but found RA={coordinates.ra.deg} deg,"
-                                 +f" DEC={coordinates.dec.deg} deg")
-            coordinates = None
+        #turns out that query can have non-zero coordinates. this seems to happen
+        #if one puts a harcoded calibrator back to query
+        # if is_query:
+        #     if coordinates.ra.deg != 0 or coordinates.dec.deg != 0:
+        #         raise ValueError("expected query calibrator of have coordinates RA=0, DEC=0,"
+        #                          +f"but found RA={coordinates.ra.deg} deg,"
+        #                          +f" DEC={coordinates.dec.deg} deg")
+        #     coordinates = None
         return Calibrator(name=name,source_name=source_name,cal_type=cal_type,
                           is_hardcoded=is_hardcoded,coordinates=coordinates)
 

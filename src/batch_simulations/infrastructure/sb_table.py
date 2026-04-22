@@ -23,6 +23,7 @@ class SBTable:
         self.array_config_12m = array_config_12m
         self.SB_filter = SB_filter
         self.read_input()
+        self.check_data_consistency()
 
     def determine_12m_array_config_number(self):
         #assuming that the config is something like c43-2 or c43-10
@@ -33,6 +34,12 @@ class SBTable:
         if config_number not in range(1,11):
             raise ValueError(f"invalid config number: {config_number}")
         return config_number
+
+    def check_data_consistency(self):
+        if self.data["sb_uid"].duplicated().any():
+            raise ValueError("Duplicated sb_uid entries")
+        if self.data.sb_state.isna().any():
+            raise ValueError("empty SB state")
 
     def read_input(self):
         input_data_sets = []
@@ -57,7 +64,8 @@ class SBTable:
         logging.info(f"after array selection, {len(data)} SBs are left")
         state_selection = ~data['sb_state'].isin(self.excluded_states_12m)
         data = data[state_selection]
-        logging.info(f"after filtering out SB in {self.excluded_states_12m}, {len(data)} SBs are left")
+        logging.info(f"after filtering out SBs in {self.excluded_states_12m}, "
+                     +f"{len(data)} SBs are left")
         data = data[self.input_columns]
         return data
 

@@ -140,7 +140,6 @@ def test_build_calibrator_from_field_source():
     assert cal.source_name == "query"
     assert cal.cal_type == "Bandpass"
     assert cal.is_hardcoded == False
-    assert cal.coordinates is None
     xml = get_xml("example_polarisation_2023.1.00013.S.xml")
     cal = xml.build_calibrator_from_field_source(field_source_partID="X1201643612")
     assert cal.name == "Polarization calibrator"
@@ -164,7 +163,6 @@ def test_read_calibrators():
     for c in calibrators:
         assert c.source_name == "query"
         assert not c.is_hardcoded
-        assert c.coordinates is None
     #case where bandpass and dgc hardcoded to the same source
     xml = get_xml("example_bandpass_equal_dgc.xml")
     calibrators = xml.read_calibrators_from_observing_groups()
@@ -188,7 +186,6 @@ def test_read_calibrators():
         for qcal in query_calibrators:
             assert qcal.source_name == "query"
             assert not qcal.is_hardcoded
-            assert qcal.coordinates is None
         hardcoded_calibrators = [cal for cal in calibrators if cal.is_hardcoded]
         assert len(hardcoded_calibrators) == case["npolcal"]
         for hcal in hardcoded_calibrators:

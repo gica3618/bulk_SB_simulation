@@ -27,5 +27,5 @@ class SimulationJob:
         return epoch
 
     def command(self):
-        return ["simulateSB.py", self.xml_filepath, self.epoch(), "-C",
+        return ["simulateSB.py", str(self.xml_filepath), self.epoch(), "-C",
                 self.array_config]
