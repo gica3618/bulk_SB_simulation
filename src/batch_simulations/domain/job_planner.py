@@ -48,5 +48,5 @@ class JobPlanner:
                             date=date, step=self.default_HA_step)
 
     def HA_jobs_fine_HA_step(self,xml_filepath,array_config,date):
-        return self.jobs(xml_filepath=xml_filepath, array_config=array_config,
-                         date=date, step=self.fine_HA_step)
+        return self.HA_jobs(xml_filepath=xml_filepath, array_config=array_config,
+                            date=date, step=self.fine_HA_step)

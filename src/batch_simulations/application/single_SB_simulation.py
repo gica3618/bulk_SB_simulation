@@ -34,7 +34,8 @@ def get_unnecessarily_restricted_HAs(has_hardcoded_cals,HAs,results,OT_allowed_H
     if not unnecessarily_restricted_HAs:
         logging.info("HA range is not unnecessarily restricted")
     else:
-        logging.info(f"unnecessarily restricted HAs: {unnecessarily_restricted_HAs}")
+        logging.info("unnecessarily restricted HA(s): "
+                     +f"{[HA.hour for HA in unnecessarily_restricted_HAs]}")
     return unnecessarily_restricted_HAs
 
 

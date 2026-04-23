@@ -22,7 +22,7 @@ class ProTrackStateChangeWriter:
         self.update_master_table()
 
     def merge_with_up_to_date_sb_table(self):
-        logging.info("going to update master table")
+        logging.info("ProTrackWriter: going to update master table")
         lookup = self.up_to_date_sb_table.data[["sb_uid", "sb_state", "sb_state_flag"]]
         if lookup.sb_uid.duplicated().any():
             raise ValueError("duplicated SB UIDs")
@@ -122,7 +122,6 @@ class ProTrackStateChangeWriter:
                                   output_dir=output_dir)
 
     def write_tables_for_ProTrack_state_changes(self,output_dir="."):
-        #TODO test
         state_changes = [{"selection":self.get_selection_for_setting_to_Ready(),
                           "targetState":"Ready",
                           "targetSubstate":"",

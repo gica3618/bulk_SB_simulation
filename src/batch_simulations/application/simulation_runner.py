@@ -15,8 +15,8 @@ from batch_simulations.utils.retry import retry
 
 class SimulationRunner:
 
-    max_trials=10
-    sleep_time=60
+    max_trials = 10
+    sleep_time = 60
 
     def run(self,job):
         with WorkFolder() as work_folder:

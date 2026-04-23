@@ -18,7 +18,7 @@ import pandas as pd
 # - for each simulation, record if server error occurred
 # - create campaign summary file that records total nb. of SBs, nb. of failed SBs,
 #nb of server errors, etc.
-
+    
 
 class SimulationCampaign:
 
