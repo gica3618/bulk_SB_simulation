@@ -13,10 +13,43 @@ from types import SimpleNamespace
 from astropy.coordinates import Angle
 from astropy import units as u
 from batch_simulations.application.single_SB_simulation import SingleSBSimulation,\
-    AnalysisResult, SingleSBSimulationSummary
+    AnalysisResult, SingleSBSimulationSummary,get_unnecessarily_restricted_HAs
 from batch_simulations.domain.simulation_result import FailReason
 from batch_simulations.infrastructure.OT_xml import BuildSBFromXML
+import itertools
 
+
+def test_get_unnecessarily_restricted_HAs():
+    class Result:
+        def __init__(self, success):
+            self.success = success
+    with_fail = [Result(False), Result(True)]
+    all_success = [Result(True), Result(True)]
+    HAs = [Angle(-1*u.hour),Angle(1*u.hour)]
+    OT_allowed_HA_wide = {"min":Angle(-12*u.hour),"max":Angle(12*u.hour)}
+    OT_allowed_HA_narrow = {"min":Angle(0*u.hour),"max":Angle(12*u.hour)}
+    #hardcoded, so cannot decide if unnecessary or not:
+    for OT_allowed_HA,results in itertools.product(
+            (OT_allowed_HA_wide,OT_allowed_HA_narrow),(with_fail,all_success)):
+        res_HAs = get_unnecessarily_restricted_HAs(
+                         has_hardcoded_cals=True,HAs=HAs,results=results,
+                         OT_allowed_HA=OT_allowed_HA)
+        assert res_HAs == []
+    #success, but HA not excluded
+    res_HAs = get_unnecessarily_restricted_HAs(
+                     has_hardcoded_cals=False,HAs=HAs,results=all_success,
+                     OT_allowed_HA=OT_allowed_HA_wide)
+    assert res_HAs == []
+    #HA excluded, but not success
+    res_HAs = get_unnecessarily_restricted_HAs(
+                     has_hardcoded_cals=False,HAs=HAs,results=with_fail,
+                     OT_allowed_HA=OT_allowed_HA_narrow)
+    assert res_HAs == []
+    #HA excluded and success
+    res_HAs = get_unnecessarily_restricted_HAs(
+                     has_hardcoded_cals=False,HAs=HAs,results=all_success,
+                     OT_allowed_HA=OT_allowed_HA_narrow)
+    assert res_HAs == [Angle(-1*u.hour)]
 
 
 class TestSingleSBSimulation:
@@ -44,25 +77,60 @@ class TestSingleSBSimulation:
         sb.requires_TP = False
         assert self.general_sb_simulation.get_array_config(sb) == "7m"
 
-    def test_simulate_HAs_retries_on_failure(self):
+    def test_simulate_again_with_fine_HA_step(self):
+        class Result:
+            def __init__(self, success):
+                self.success = success
+        with_fail = [Result(False), Result(True)]
+        all_success = [Result(True), Result(True)]
+        HAs = [Angle(-1*u.hour),Angle(1*u.hour)]
+        OT_allowed_HA = {"min":Angle(-12*u.hour),"max":Angle(12*u.hour)}
+        sim_again = SingleSBSimulation.simulate_again_with_fine_HA_step
+        #case where HA is not unnecessarily restricted:
+        for hard in (True,False):
+            assert not sim_again(results=all_success,HAs=HAs,has_hardcoded_cals=hard,
+                                 OT_allowed_HA=OT_allowed_HA)
+            assert sim_again(results=with_fail,HAs=HAs,has_hardcoded_cals=hard,
+                             OT_allowed_HA=OT_allowed_HA)
+        OT_allowed_HA["min"] = Angle(0*u.hour)
+        #unnecessarily restricted HA, no hardcoding
+        assert sim_again(results=all_success,HAs=HAs,has_hardcoded_cals=False,
+                         OT_allowed_HA=OT_allowed_HA)
+        ##unnecessarily restricted HA, but hardcoding, so cannot say if it really
+        #is unnecessary
+        assert not sim_again(results=all_success,HAs=HAs,has_hardcoded_cals=True,
+                             OT_allowed_HA=OT_allowed_HA)
+
+    def test_simulate_HAs(self):
         #inspired by ChatGPT
+        class FakeSingleSBSimulation:
+            xml_filepath = "/tmp/file.xml"
+            date = datetime.date(1978,3,3)
+            simulate_HAs = SingleSBSimulation.simulate_HAs
+            @staticmethod
+            def simulate_again_with_fine_HA_step(results,HAs,has_hardcoded_cals,
+                                                 OT_allowed_HA):
+                return SingleSBSimulation.simulate_again_with_fine_HA_step(
+                       results=results,HAs=HAs,has_hardcoded_cals=has_hardcoded_cals,
+                       OT_allowed_HA=OT_allowed_HA)
+
         class Result:
             def __init__(self, success):
                 self.success = success
         results_with_fail = [Result(False), Result(True)]
         results_all_success = [Result(True), Result(True)]
 
-        class FakeSingleSBSimulation:
-            xml_filepath = "/tmp/file.xml"
+        class FakePlanner:
             default_HA_step = SingleSBSimulation.default_HA_step
             fine_HA_step = SingleSBSimulation.fine_HA_step
-            date = datetime.date(1978,3,3)
-            simulate_HAs = SingleSBSimulation.simulate_HAs
-
-        class FakePlanner:
             def HA_jobs(self, xml_filepath, array_config, date, step):
-                return [SimpleNamespace(HA=Angle(1*u.hour)),
-                        SimpleNamespace(HA=Angle(1*u.hour)+step)]
+                HAs = [Angle(1*u.hour),Angle(1*u.hour)+step]
+                jobs = [SimpleNamespace(HA=HA) for HA in HAs]
+                return HAs,jobs
+            def HA_jobs_default_HA_step(self,**kwargs):
+                return self.HA_jobs(**kwargs,step=self.default_HA_step)
+            def HA_jobs_fine_HA_step(self,**kwargs):
+                return self.HA_jobs(**kwargs,step=self.fine_HA_step)
 
         class FakeRunnerFail:
             def run_jobs(self, jobs):
@@ -72,16 +140,34 @@ class TestSingleSBSimulation:
             def run_jobs(self, jobs):
                 return results_all_success
     
+        class FakeSB:
+            def __init__(self,any_hardcoded,OT_allowed_HA):
+                self.any_hardcoded = any_hardcoded
+                self.OT_allowed_HA = OT_allowed_HA
+            def any_calibrator_hardcoded(self):
+                return self.any_hardcoded
+    
         single_sim = FakeSingleSBSimulation()
         planner = FakePlanner()
-
-        kwargs = {"planner":planner,"array_config":"c43-5"}
+        
+        #test if success and failure:
+        sb = FakeSB(any_hardcoded=False, OT_allowed_HA={"min":Angle(-12*u.hour),
+                                                        "max":Angle(12*u.hour)})
+        kwargs = {"planner":planner,"array_config":"c43-5","sb":sb}
         HAs,results = single_sim.simulate_HAs(**kwargs,runner_cls=FakeRunnerSuccess)
         assert HAs[1]-HAs[0] == SingleSBSimulation.default_HA_step
         assert results == results_all_success
         HAs,results = single_sim.simulate_HAs(**kwargs,runner_cls=FakeRunnerFail)
         assert HAs[1]-HAs[0] == SingleSBSimulation.fine_HA_step
         assert results == results_with_fail
+        
+        #test unnecessarily restricted HA:
+        sb = FakeSB(any_hardcoded=False, OT_allowed_HA={"min":Angle(-12*u.hour),
+                                                        "max":Angle(0*u.hour)})
+        kwargs["sb"] = sb
+        HAs,results = single_sim.simulate_HAs(**kwargs,runner_cls=FakeRunnerSuccess)
+        assert HAs[1]-HAs[0] == SingleSBSimulation.fine_HA_step
+        assert results == results_all_success
 
     def test_simulate(self):
         class FakeJob:
@@ -98,8 +184,8 @@ class TestSingleSBSimulation:
             def prepare_sb(self):
                 return
             def get_array_config(self,sb):
-                return "c43-3" 
-            def simulate_HAs(self,planner,array_config):
+                return "c43-3"
+            def simulate_HAs(self,planner,array_config,sb):
                 results = [f"result_{HA}" for HA in self.HAs]
                 return self.HAs,results
         with patch("batch_simulations.application.single_SB_simulation.JobPlanner") as MockJobPlanner:

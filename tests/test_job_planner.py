@@ -70,9 +70,8 @@ class TestJobPlanner:
         array_config  = "c43-6"
         date = datetime.date(year=1912,month=10,day=5)
         step = Angle(0.3*u.hour)
-        jobs = job_planner.HA_jobs(xml_filepath=xml_filepath, array_config=array_config,
-                                   date=date, step=step)
-        job_HAs = job_planner.compute_HAs(step=step)
-        assert len(jobs) == len(job_HAs)
-        for i,HA in enumerate(job_HAs):
+        HAs, jobs = job_planner.HA_jobs(xml_filepath=xml_filepath, array_config=array_config,
+                                        date=date, step=step)
+        assert len(jobs) == len(HAs)
+        for i,HA in enumerate(HAs):
             assert jobs[i].HA == HA

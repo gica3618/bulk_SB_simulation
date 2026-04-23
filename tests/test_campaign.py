@@ -164,8 +164,8 @@ class TestCampaignResultFormatter:
         assert row["simulations"] == CampaignResultFormatter.build_per_HA_summary_string(
                                       simulation_results=FakeSBSummary.simulation_results,
                                       HAs=FakeSBSummary.HAs)
-        assert row["inspection reasons"] == "simulation failure"
-        assert row["should be Waiting"]
+        assert row["inspection_reasons"] == "simulation failure"
+        assert row["should_be_Waiting"]
         #case with unexpected error:
         unexpected_error = {"error_message":"kabumm","full_traceback":"the full traceback"}
         row = {}
@@ -175,9 +175,9 @@ class TestCampaignResultFormatter:
         fake_formatter.add_simulation_info(row=row,sb_sim_summary=sb_sim_summary)
         assert len(row) == 4
         assert row["simulations"] == unexpected_error["error_message"]
-        assert row["traceback of unexpected error"] == unexpected_error["full_traceback"]
-        assert row["inspection reasons"] == "unexpected error"
-        assert row["should be Waiting"]
+        assert row["traceback_of_unexpected_error"] == unexpected_error["full_traceback"]
+        assert row["inspection_reasons"] == "unexpected error"
+        assert row["should_be_Waiting"]
 
     def test_build_per_HA_summary_string(self):
         expected_summary = ""

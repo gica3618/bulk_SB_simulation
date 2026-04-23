@@ -27,9 +27,14 @@ class SimulationRunner:
                                        executed_command=" ".join(command),
                                        process=process,output_folder=work_folder,
                                        xml_filename=Path(job.xml_filepath).name)
+            def retry_condition(sim_result):
+                if sim_result.success:
+                    return False
+                else:
+                    return sim_result.fail_reason.category == "server error"
             return retry(operation=operation,max_trials=self.max_trials,
                          sleep_time=self.sleep_time,
-                         retry_condition=lambda sim_result: sim_result.server_error)
+                         retry_condition=retry_condition)
 
     def run_jobs(self,jobs):
         return [self.run(job) for job in jobs] 

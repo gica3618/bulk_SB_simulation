@@ -17,6 +17,27 @@ from batch_simulations.application.simulation_runner import SimulationRunner
 from batch_simulations.domain.job_planner import JobPlanner
 
 
+def get_unnecessarily_restricted_HAs(has_hardcoded_cals,HAs,results,OT_allowed_HA):
+    unnecessarily_restricted_HAs = []
+    if has_hardcoded_cals:
+        #if a simulation is successful, I can only conclude that it is indeed fine
+        #if there are no hardcoded calibrators; so for SBs with hardcoded
+        #calibrators, I cannot say that HA restrictions should be lifted
+        #even if simulation runs fine
+        logging.info("SB has hardcoded calibrators, cannot determine if HAs are "
+                     +"unnecessarily restricted")
+        return unnecessarily_restricted_HAs
+    for HA,result in zip(HAs,results):
+        HA_is_excluded = (HA < OT_allowed_HA["min"]) or (HA > OT_allowed_HA["max"])
+        if result.success and HA_is_excluded:
+            unnecessarily_restricted_HAs.append(HA)
+    if not unnecessarily_restricted_HAs:
+        logging.info("HA range is not unnecessarily restricted")
+    else:
+        logging.info(f"unnecessarily restricted HAs: {unnecessarily_restricted_HAs}")
+    return unnecessarily_restricted_HAs
+
+
 class SingleSBSimulation:
 
     default_HA_step = Angle(1*u.hour)
@@ -49,18 +70,37 @@ class SingleSBSimulation:
         sb = BuildSBFromXML.build(self.xml_filepath)
         return sb
 
-    def simulate_HAs(self, planner, array_config, runner_cls=SimulationRunner):
-        def run_grid(step):
-            jobs = planner.HA_jobs(xml_filepath=self.xml_filepath,
-                                   array_config=array_config,date=self.date,
-                                   step=step)
-            runner = runner_cls()
-            return jobs, runner.run_jobs(jobs)
-        jobs, results = run_grid(self.default_HA_step)
+    @staticmethod
+    def simulate_again_with_fine_HA_step(results,HAs,has_hardcoded_cals,
+                                         OT_allowed_HA):
         if not all(r.success for r in results):
-            logging.info("Retrying with finer HA grid")
-            jobs, results = run_grid(self.fine_HA_step)
-        return [j.HA for j in jobs], results
+            logging.info("should run again with finer HA step because some "
+                         +"simulations failed")
+            return True
+        unnec_res_HAs = get_unnecessarily_restricted_HAs(
+                            has_hardcoded_cals=has_hardcoded_cals,
+                            HAs=HAs, results=results, OT_allowed_HA=OT_allowed_HA)
+        if unnec_res_HAs:
+            logging.info("should run again with finer HA step because of "
+                         +"unnecessarily restricted HA(s)")
+            return True
+        return False
+
+    def simulate_HAs(self, planner, array_config, sb, runner_cls=SimulationRunner):
+        def run_grid(job_creator):
+            HAs,jobs = job_creator(xml_filepath=self.xml_filepath,
+                                   array_config=array_config,date=self.date)
+            runner = runner_cls()
+            return HAs, runner.run_jobs(jobs)
+        HAs, results = run_grid(job_creator=planner.HA_jobs_default_HA_step)
+        should_run_again = self.simulate_again_with_fine_HA_step(
+                               results=results, HAs=HAs,
+                               has_hardcoded_cals=sb.any_calibrator_hardcoded(),
+                               OT_allowed_HA=sb.OT_allowed_HA)
+        if should_run_again:
+            logging.info("Simulating again with finer HA grid")
+            HAs, results = run_grid(job_creator=planner.HA_jobs_fine_HA_step)
+        return HAs, results
 
     def simulate(self):
         try:
@@ -69,7 +109,7 @@ class SingleSBSimulation:
             planner = JobPlanner(sb=sb,default_HA_step=self.default_HA_step,
                                  fine_HA_step=self.fine_HA_step)
             HAs, results = self.simulate_HAs(
-                                planner=planner,array_config=array_config)
+                                planner=planner,array_config=array_config,sb=sb)
             return SingleSBSimulationSummary(sb=sb,date=self.date,
                                              HAs=HAs,
                                              config=array_config,
@@ -148,26 +188,15 @@ class SingleSBSimulationSummary:
         return AnalysisResult()
 
     def analyse_HA_restriction(self):
-        if self.sb.any_calibrator_hardcoded():
-            #if a simulation is successful, I can only conclude that it is indeed fine
-            #if there are no hardcoded calibrators; so for SBs with hardcoded
-            #calibrators, I cannot say that HA restrictions should be lifted
-            #even if simulation runs fine
-            return AnalysisResult()
-    
-        unnecessarily_restricted_HAs = []
-        for HA,result in zip(self.HAs,self.simulation_results):
-            HA_is_excluded = HA < self.sb.OT_allowed_HA["min"] or\
-                             HA > self.sb.OT_allowed_HA["max"]
-            if result.success and HA_is_excluded:
-                unnecessarily_restricted_HAs.append(HA)
-    
+        unnecessarily_restricted_HAs = get_unnecessarily_restricted_HAs(
+                                          has_hardcoded_cals=self.sb.any_calibrator_hardcoded(),
+                                          HAs=self.HAs, results=self.simulation_results,
+                                          OT_allowed_HA=self.sb.OT_allowed_HA)
         if not unnecessarily_restricted_HAs:
             logging.info("HA is not unnecessarily restricted")
             return AnalysisResult()
-    
         ha_str = ", ".join(str(HA.hour) for HA in unnecessarily_restricted_HAs)
-        logging.info(f"HA is unnecessarily restricted at {ha_str}")
+        logging.info(f"HA is unnecessarily restricted at following HA(s): {ha_str}")
         return AnalysisResult(inspection_reasons=[f"unnecessarily restricted HAs: {ha_str}"],
                               should_be_Waiting=False)
 

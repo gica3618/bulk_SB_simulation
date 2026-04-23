@@ -14,6 +14,12 @@ from batch_simulations.application.single_SB_simulation import SingleSBSimulatio
 import pandas as pd
 
 
+#TODO
+# - for each simulation, record if server error occurred
+# - create campaign summary file that records total nb. of SBs, nb. of failed SBs,
+#nb of server errors, etc.
+
+
 class SimulationCampaign:
 
     def __init__(self, name, sb_table, date):
@@ -40,7 +46,7 @@ class CampaignResultFormatter:
                                 "sb_state_flag")
     writer = TableWriter()
     p2g_columns = TableWriter.column_order.copy()
-    p2g_columns.remove("traceback of unexpected error")
+    p2g_columns.remove("traceback_of_unexpected_error")
 
     def __init__(self,campaign):
         self.campaign = campaign
@@ -115,9 +121,9 @@ class CampaignResultFormatter:
         else:
             unexpected_error = sb_sim_summary.unexpected_error
             row["simulations"] = unexpected_error["error_message"]
-            row["traceback of unexpected error"] = unexpected_error["full_traceback"]
-        row["inspection reasons"] = "; ".join(sb_sim_summary.analysis_result.inspection_reasons)
-        row["should be Waiting"] = sb_sim_summary.analysis_result.should_be_Waiting
+            row["traceback_of_unexpected_error"] = unexpected_error["full_traceback"]
+        row["inspection_reasons"] = "; ".join(sb_sim_summary.analysis_result.inspection_reasons)
+        row["should_be_Waiting"] = sb_sim_summary.analysis_result.should_be_Waiting
 
     @staticmethod
     def build_per_HA_summary_string(simulation_results, HAs):
@@ -137,7 +143,7 @@ class CampaignResultFormatter:
 
     def write_table_for_P2G(self,out_format,output_dir="."):
         out = self.master_table[self.p2g_columns]
-        need_inspection = out["inspection reasons"] != ""
+        need_inspection = out["inspection_reasons"] != ""
         filename = f"p2g_table_{self.campaign.name}.{out_format}"
         logging.info(f"going to write P2G table to disk (filename: {filename})")
         self.writer.write_table_to_disk(dataframe=out[need_inspection],filename=filename,
@@ -152,8 +158,8 @@ class CampaignRunner:
         self.date = date
 
     def run(self):
-        self.campaign = SimulationCampaign(name=self.name, sb_table=self.sb_table,
-                                           date=self.date)
-        self.campaign.run()
-        self.campaign_result = CampaignResultFormatter(campaign=self.campaign)
-        self.campaign_result.create_master_dataframe()
+        campaign = SimulationCampaign(name=self.name, sb_table=self.sb_table,
+                                      date=self.date)
+        campaign.run()
+        self.result = CampaignResultFormatter(campaign=campaign)
+        self.result.create_master_dataframe()

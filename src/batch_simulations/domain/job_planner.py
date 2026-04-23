@@ -36,11 +36,12 @@ class JobPlanner:
 
     def HA_jobs(self, xml_filepath, array_config, date, step):
         jobs = []
-        for ha in self.compute_HAs(step):
+        HAs = self.compute_HAs(step)
+        for HA in HAs:
             job = SimulationJob(xml_filepath=xml_filepath,array_config=array_config,
-                                HA=ha,date=date)
+                                HA=HA,date=date)
             jobs.append(job)
-        return jobs
+        return HAs,jobs
 
     def HA_jobs_default_HA_step(self,xml_filepath,array_config,date):
         return self.HA_jobs(xml_filepath=xml_filepath, array_config=array_config,
