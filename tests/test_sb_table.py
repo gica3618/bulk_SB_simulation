@@ -111,7 +111,6 @@ class TestSBTable:
             with pytest.raises(ValueError):
                 SBTable(input_filepaths={"12m":filepath,"7m":None},
                         array_config_12m="c43-5",SB_filter=None)
-        
 
     def test_filter_p2g(self):
         p2g = "gianni"
@@ -144,3 +143,19 @@ class TestSBTable:
         assert len(table.data) == len(data12m_filtered) + len(data7m_filtered)
         assert sorted(table.data["sb_uid"])\
                == sorted(list(data12m_filtered["sb_uid"]) + list(data7m_filtered["SB UID"]))
+
+    def test_get_number_of_12m_and_7m_SBs(self):
+        fake_data = pd.DataFrame({"sbname":["SDSSJ231_a_09_TM2",
+                                            "G022.25_a_09_7M",
+                                            "G028.34_a_09_7M",
+                                            "G022.25_a_09_TM1",
+                                            "W44_Peti_a_08_7M",
+                                            "LaPequen_c_10_TM1",
+                                            "LaPequen_b_10_TM1"]})
+        class FakeSBTable:
+            data = fake_data
+            get_number_of_12m_and_7m_SBs = SBTable.get_number_of_12m_and_7m_SBs
+        fake = FakeSBTable()
+        nb_of_SBs = fake.get_number_of_12m_and_7m_SBs()
+        assert nb_of_SBs["12m"] == 4
+        assert nb_of_SBs["7m"] == 3

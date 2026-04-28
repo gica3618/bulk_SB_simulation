@@ -15,8 +15,6 @@ class SBTable:
     input_columns = ["sb_uid", "code", "p2g_account", "sbname", "sb_state",
                      "sb_state_flag"]
     excluded_states_12m = ('FullyObserved','ObservingTimedOut')
-    #TODO filter out VLBI and solar? Or are they anyway not in the 12m lookup
-    #table and the 7M table?
 
     def __init__(self,input_filepaths,array_config_12m,SB_filter):
         self.input_filepaths = input_filepaths
@@ -61,11 +59,11 @@ class SBTable:
         array_config_number = self.determine_12m_array_config_number()
         array_selection = data[f"selected_c{array_config_number}"]
         data = data[array_selection]
-        logging.info(f"after array selection, {len(data)} SBs are left")
+        logging.info(f"after array selection, {len(data)} 12m SBs are left")
         state_selection = ~data['sb_state'].isin(self.excluded_states_12m)
         data = data[state_selection]
         logging.info(f"after filtering out SBs in {self.excluded_states_12m}, "
-                     +f"{len(data)} SBs are left")
+                     +f"{len(data)} 12m SBs are left")
         data = data[self.input_columns]
         return data
 
@@ -83,3 +81,10 @@ class SBTable:
         data.rename(mapper=column_rename_mapper,inplace=True,axis="columns")
         data = data[self.input_columns]
         return data
+
+    def get_number_of_12m_and_7m_SBs(self):
+        is_7m = self.data.sbname.apply(lambda sbname: sbname.split("_")[-1]=="7M")
+        number_of_7m_SBs = is_7m.sum()
+        return {"12m":len(self.data)-number_of_7m_SBs,
+                "7m":number_of_7m_SBs}
+        

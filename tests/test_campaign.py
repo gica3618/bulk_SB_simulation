@@ -36,6 +36,8 @@ class FakeFormatterForWritingTests:
     campaign = SimpleNamespace(name="test")
     writer = TableWriter()
     p2g_columns = CampaignResultFormatter.p2g_columns
+    need_inspection_master_table_selection\
+                 = CampaignResultFormatter.need_inspection_master_table_selection
     write_master_table = CampaignResultFormatter.write_master_table
     write_table_for_P2G = CampaignResultFormatter.write_table_for_P2G
     def __init__(self):
@@ -228,7 +230,6 @@ class TestCampaignResultFormatter:
         fake_formatter = FakeFormatterForWritingTests()
         with tempfile.TemporaryDirectory() as tmpdirname:
             for out_format in ("csv","xlsx"):
-                # filepath = tmpdirname / Path(f"test.{extension}")
                 fake_formatter.write_table_for_P2G(out_format=out_format,
                                                    output_dir=tmpdirname)
                 filepath = tmpdirname / Path(f"p2g_table_{fake_formatter.campaign.name}.{out_format}")
@@ -240,6 +241,150 @@ class TestCampaignResultFormatter:
                 else:
                     raise RuntimeError
                 assert sorted(written_data.columns) == sorted(fake_formatter.p2g_columns)
+
+
+
+class FakeSimSummary:
+
+    def __init__(self,include_2h_fail=False,inspection_reasons=None):
+        ir = [] if inspection_reasons is None else inspection_reasons
+        self.analysis_result = SimpleNamespace(inspection_reasons=ir)
+        self.simulation_results = [SimpleNamespace(success=True,fail_reason=None),
+                                   SimpleNamespace(success=False,
+                                                   fail_reason=FailReason(error_message="test",
+                                                                          error_summary="no check",
+                                                                          category="missing calibrator"))]
+        no_phase = SimpleNamespace(success=False,
+                                   fail_reason=FailReason(error_message="test",
+                                                          error_summary="no phase",
+                                                          category="missing calibrator"))
+        #add same result twice:
+        self.simulation_results += [no_phase]*2
+        assert len(self.simulation_results) == 4
+        if include_2h_fail:
+            self.simulation_results.append(SimpleNamespace(success=False,
+                                                           fail_reason=FailReason(error_message="test",
+                                                                                  error_summary="SB too long by X seconds",
+                                                                                  category="exceeds 2h limit")))
+
+
+class TestCampaignResultFormatterSummaryFile:
+
+    def test_need_inspection_selection(self):
+        class FakeFormatter:
+            master_table = pd.DataFrame({"inspection_reasons":["","problem","","","Asterix"]})
+            need_inspection_master_table_selection\
+                   = CampaignResultFormatter.need_inspection_master_table_selection
+        fake = FakeFormatter()
+        need_inspection = fake.need_inspection_master_table_selection()
+        assert all(need_inspection==[False,True,False,False,True])
+
+    def test_summarize_number_of_simulated_SBs(self):
+        def get_number_of_12m_and_7m_SBs():
+            return {"12m":3,"7m":2}
+        data = pd.DataFrame({"sb_uid":[f"uid{i}" for i in range(5)]})
+        sb_table = SimpleNamespace(data=data,
+                                   get_number_of_12m_and_7m_SBs=get_number_of_12m_and_7m_SBs)
+        class FakeFormatter:
+            campaign = SimpleNamespace(sb_table=sb_table)
+            summarize_number_of_simulated_SBs = CampaignResultFormatter.summarize_number_of_simulated_SBs
+        summary = FakeFormatter().summarize_number_of_simulated_SBs()
+        assert summary == "nb. of simulated SBs: 5 (12m: 3; 7m: 2)\n"
+
+    def test_summarize_unexpected_errors(self):
+        class SimSummary:
+            def __init__(self,unexpected_error):
+                self.unexpected_error = unexpected_error
+        class FakeFormatter:
+            sb_simulation_summaries = [SimSummary(None),SimSummary(None),
+                                       SimSummary("test"),SimSummary(None)]
+            campaign = SimpleNamespace(sb_simulation_summaries=sb_simulation_summaries)
+            summarize_unexpected_errors = CampaignResultFormatter.summarize_unexpected_errors
+        summary = FakeFormatter().summarize_unexpected_errors()
+        assert summary == "1 SBs yielded an unexpected error\n"
+
+    def test_summarize_number_of_inspections(self):
+        class FakeFormatter:
+            master_table = pd.DataFrame({"inspection_reasons":["","problem","","","Asterix"]})
+            need_inspection_master_table_selection\
+                     = CampaignResultFormatter.need_inspection_master_table_selection
+            summarize_number_of_inspections = CampaignResultFormatter.summarize_number_of_inspections
+        summary = FakeFormatter().summarize_number_of_inspections()
+        assert summary == "2 SBs need inspection\n"
+
+    def test_get_count_lines(self):
+        reasons = ["Asterix","Obelix","Asterix","no check","no phase","no check"]
+        count_lines = CampaignResultFormatter.get_count_lines(reasons)
+        assert count_lines == "Asterix: 2\n"+"no check: 2\n"+"Obelix: 1\n"\
+                               +"no phase: 1\n"
+
+    def test_summarize_inspection_reasons(self):
+        class FakeFormatter:
+            sb_simulation_summaries = [FakeSimSummary(inspection_reasons=None),
+                                       FakeSimSummary(inspection_reasons=["error 1", "error 2"]),
+                                       FakeSimSummary(inspection_reasons=["error 1"]),
+                                       FakeSimSummary(inspection_reasons=["error 3"])]
+            campaign = SimpleNamespace(sb_simulation_summaries=sb_simulation_summaries)
+            summarize_inspection_reasons = CampaignResultFormatter.summarize_inspection_reasons
+            @staticmethod
+            def get_count_lines(reasons):
+                return CampaignResultFormatter.get_count_lines(reasons)
+        summary = FakeFormatter().summarize_inspection_reasons()
+        assert summary == "inspection reasons:\nerror 1: 2\n" + "error 2: 1\n" + "error 3: 1\n"
+
+    def test_get_fail_reasons_per_SB(self):
+        sb_simulation_summaries = [FakeSimSummary(include_2h_fail=True),
+                                   FakeSimSummary(include_2h_fail=False)]
+        fail_reasons = CampaignResultFormatter.get_fail_reasons_per_SB(sb_simulation_summaries)
+        assert len(fail_reasons) == 5
+        assert fail_reasons.count("no check") == 2
+        assert fail_reasons.count("no phase") == 2
+        assert fail_reasons.count("exceeds 2h limit") == 1
+
+
+    def test_summarize_fail_reasons(self):
+        sb_simulation_summaries = [FakeSimSummary(inspection_reasons=None),
+                                   FakeSimSummary(inspection_reasons=["error 1", "error 2"]),
+                                   FakeSimSummary(inspection_reasons=["error 1"],
+                                                  include_2h_fail=True),
+                                   FakeSimSummary(inspection_reasons=["error 3"])]
+        class FakeFormatter:
+            campaign = SimpleNamespace(sb_simulation_summaries=sb_simulation_summaries)
+            summarize_fail_reasons = CampaignResultFormatter.summarize_fail_reasons
+            @staticmethod
+            def get_fail_reasons_per_SB(sb_simulation_summaries):
+                return CampaignResultFormatter.get_fail_reasons_per_SB(sb_simulation_summaries)
+            @staticmethod
+            def get_count_lines(reasons):
+                return CampaignResultFormatter.get_count_lines(reasons)
+        fake = FakeFormatter()
+        summary = fake.summarize_fail_reasons()
+        split = summary.split("\n")
+        assert split[0] == "number of SBs failing with reason X at at least one hour angle (all SBs):"
+        assert "no check: 4" in split[1:3]
+        assert "no phase: 4" in split[1:3]
+        assert split[3] == "exceeds 2h limit: 1"
+        assert split[4] == "number of SBs failing with reason X at at least one hour angle (SBs needing inspection):"
+        assert "no check: 3" in split[5:7]
+        assert "no phase: 3" in split[5:7]
+        assert split[7] == "exceeds 2h limit: 1"
+
+    def test_write_campaign_summar(self):
+        #just checking that this runs
+        class FakeFormatter:
+            campaign = SimpleNamespace(name="test",date=datetime.date(1475,3,13),
+                                       run_time=datetime.timedelta(seconds=145))
+            summarize_number_of_simulated_SBs = lambda self: "test\n"
+            summarize_unexpected_errors = lambda self: "rassel\n"
+            summarize_number_of_inspections = lambda self: "Asterix und Obelix\n"
+            summarize_inspection_reasons = lambda self: "okbre\n"
+            summarize_fail_reasons = lambda self: "hallihallo\numgi\ntanpopopo\n"
+            write_campaign_summary = CampaignResultFormatter.write_campaign_summary
+        fake = FakeFormatter()
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            fake.write_campaign_summary(output_dir=tmpdirname)
+            filepath = tmpdirname / Path("campaign_test_summary.txt")
+            assert filepath.exists()
 
 
 class TestCampaign:

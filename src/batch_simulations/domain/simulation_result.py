@@ -50,15 +50,17 @@ class FailReason:
             if message.startswith("No visible science target"):
                 error_summary = message
     
-            if message.startswith("All science targets in") and message.endswith("are unobservable"):
+            elif message.startswith("All science targets in") and message.endswith("are unobservable"):
                 error_summary = message
     
-            if (message.startswith("Although execution of")
-                   and message.endswith("And also failed to find out another viable calibrator.")):
+            elif (message.startswith("Although execution of")
+                                     and "it is not observable" in message):
                 parts = message.split()
                 calibrator_type = parts[3].replace("'", "")
                 calibrator_name = parts[5]
                 error_summary = f"{calibrator_type} {calibrator_name} not observable"
+            else:
+                error_summary = error_message
             return cls(error_message=error_message,error_summary=error_summary,
                        category="unobservable")
 

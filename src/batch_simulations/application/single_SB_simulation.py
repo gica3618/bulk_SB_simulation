@@ -198,7 +198,7 @@ class SingleSBSimulationSummary:
             return AnalysisResult()
         ha_str = ", ".join(str(HA.hour) for HA in unnecessarily_restricted_HAs)
         logging.info(f"HA is unnecessarily restricted at following HA(s): {ha_str}")
-        return AnalysisResult(inspection_reasons=[f"unnecessarily restricted HAs: {ha_str}"],
+        return AnalysisResult(inspection_reasons=[f"unnecessarily restricted HA(s): {ha_str}"],
                               should_be_Waiting=False)
 
     def HA_is_allowed(self,HA):

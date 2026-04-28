@@ -75,7 +75,8 @@ class TableWriter:
                         lines = val.count("\n") + 1
                         max_lines = max(max_lines, lines)
                     # Approximate row height (15 is default Excel row height)
-                    worksheet.set_row(row=row_idx + 1, height=15 * max_lines)
+                    #later changed to 14, seems to work better
+                    worksheet.set_row(row=row_idx + 1, height=14 * max_lines)
 
     def sort_columns(self,columns):
         return sorted(columns, key=lambda x: self.column_order_lookup[x])

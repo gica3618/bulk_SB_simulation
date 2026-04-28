@@ -300,11 +300,11 @@ class TestSingleSBSimulationSummary:
         assert not ana.should_be_Waiting
         fake_summary.sb.OT_allowed_HA = {"min":Angle(-1*u.hour),"max":Angle(12*u.hour)}
         ana = fake_summary.analyse_HA_restriction()
-        assert ana.inspection_reasons == ["unnecessarily restricted HAs: -2.0"]
+        assert ana.inspection_reasons == ["unnecessarily restricted HA(s): -2.0"]
         assert not ana.should_be_Waiting
         fake_summary.sb.OT_allowed_HA = {"min":Angle(-1*u.hour),"max":Angle(2*u.hour)}
         ana = fake_summary.analyse_HA_restriction()
-        assert ana.inspection_reasons == ["unnecessarily restricted HAs: -2.0, 4.0"]
+        assert ana.inspection_reasons == ["unnecessarily restricted HA(s): -2.0, 4.0"]
         assert not ana.should_be_Waiting
 
     def test_HA_is_allowed(self):
@@ -442,5 +442,5 @@ class TestSingleSBSimulationSummary:
         summary = SingleSBSimulationSummary(HAs=HAs,simulation_results=simulation_results,
                                             **summary_kwargs)
         summary.analyse_no_unexpected_error()
-        assert summary.analysis_result.inspection_reasons == ['unnecessarily restricted HAs: -14.0']
+        assert summary.analysis_result.inspection_reasons == ['unnecessarily restricted HA(s): -14.0']
         assert not summary.analysis_result.should_be_Waiting

@@ -7,6 +7,7 @@ Created on Thu Mar  5 15:43:14 2026
 """
 
 from pathlib import Path
+import logging
 from batch_simulations.utils.workfolder import WorkFolder
 from batch_simulations.infrastructure.simulator import Simulator
 from batch_simulations.domain.simulation_result import SimulationResult
@@ -29,9 +30,14 @@ class SimulationRunner:
                                        xml_filename=Path(job.xml_filepath).name)
             def retry_condition(sim_result):
                 if sim_result.success:
+                    logging.info("retry condition not satisfied (simulation succeeded)")
                     return False
+                if sim_result.fail_reason.category == "server error":
+                    logging.info("retry condition satisfied (server error)")
+                    return True
                 else:
-                    return sim_result.fail_reason.category == "server error"
+                    logging.info("simulation failed, but retry condition not satisfied")
+                    return False
             return retry(operation=operation,max_trials=self.max_trials,
                          sleep_time=self.sleep_time,
                          retry_condition=retry_condition)
