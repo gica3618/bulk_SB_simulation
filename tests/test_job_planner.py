@@ -40,21 +40,22 @@ class TestJobPlanner:
             assert np.all([HA.hour for HA in sim_HA] == np.arange(expected_HA_limits["min"].hour,
                                                                   expected_HA_limits["max"].hour+0.0001,
                                                                   step.hour))
-        #test the case where DSAmin is not included
+        #test the case where DSAmin is included although it is not preserving step size:
         step = Angle(0.7486*u.hour)
         sim_HA = np.array([HA.hour for HA in job_planner.compute_HAs(step=step)])
         assert sim_HA[-1] == expected_HA_limits["max"].hour
-        diff = np.diff(sim_HA)
+        assert sim_HA[0] == expected_HA_limits["min"].hour
+        diff = np.diff(sim_HA[1:])
         assert np.allclose(diff[0],diff,atol=0,rtol=1e-6)
-        assert sim_HA[0] > expected_HA_limits["min"].hour
-        assert sim_HA[0]-step.hour < expected_HA_limits["min"].hour
 
     def test_compute_HAs_explicitly(self):
         job_planner = self.generate_general_planner()
         job_planner.DSA_HA["min"] = Angle(-3.2*u.hour)
         job_planner.DSA_HA["max"] = Angle(3*u.hour)
         sim_HA = job_planner.compute_HAs(step=Angle(0.5*u.hour))
-        assert np.all([HA.hour for HA in sim_HA] == np.arange(-3,3.1,0.5))
+        expected_HAs = np.arange(-3,3.1,0.5)
+        expected_HAs = np.insert(expected_HAs, 0, -3.2) 
+        assert np.all([HA.hour for HA in sim_HA] == expected_HAs)
     
     def test_negative_step(self):
         job_planner = self.generate_general_planner()
@@ -73,8 +74,8 @@ class TestJobPlanner:
         for i,HA in enumerate(HAs):
             assert jobs[i].HA == HA
         HAs_num = [HA.hour for HA in HAs]
-        #lowest HA might not be equal to 
-        assert np.allclose(np.diff(HAs_num),expected_step.hour,atol=0,rtol=1e-8)
+        #lowest HA might have different step
+        assert np.allclose(np.diff(HAs_num[1:]),expected_step.hour,atol=0,rtol=1e-8)
 
     def test_HA_jobs(self):
         job_planner = self.generate_general_planner()

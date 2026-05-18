@@ -30,12 +30,13 @@ class ProTrackStateChangeWriter:
                                        suffixes=("", "_updated"))
 
     @staticmethod
-    def check_missing_sb_state(merged):
+    def remove_missing(merged):
         missing = merged["sb_state_updated"].isna()
-        if missing.any():
-            missing_uids = merged.loc[missing, "sb_uid"].tolist()
-            msg = f"SB UIDs missing in the up-to-date table: {missing_uids}"
-            raise ValueError(msg)
+        logging.info(f"{missing.sum()} SBs are missing in the up-to-date table:")
+        missing_uids = merged.loc[missing, "sb_uid"].tolist()
+        logging.info(str(missing_uids))
+        logging.info("these missing SBs will not be considered for state changes")
+        return merged[~missing]
 
     @staticmethod
     def analyse_number_of_updates(merged):
@@ -44,13 +45,14 @@ class ProTrackStateChangeWriter:
         was_updated = old_state != updated_state
         logging.info(f"updated {was_updated.sum()}/{len(old_state)} states")
 
-    def analyse_state_updates(self,merged):
-        self.check_missing_sb_state(merged=merged)
-        self.analyse_number_of_updates(merged=merged)
+    # def analyse_state_updates(self,merged):
+    #     self.check_missing_sb_state(merged=merged)
+    #     self.analyse_number_of_updates(merged=merged)
 
     def update_master_table(self):
         merged = self.merge_with_up_to_date_sb_table()
-        self.analyse_state_updates(merged=merged)
+        merged = self.remove_missing(merged)
+        self.analyse_number_of_updates(merged=merged)
         for key in ("sb_state","sb_state_flag"):
             merged[key] = merged[f"{key}_updated"]
         self.master_table = merged.drop(columns=["sb_state_updated", "sb_state_flag_updated"])
@@ -97,11 +99,16 @@ class ProTrackStateChangeWriter:
         #remember to only set stuff to Ready that does not have
         #hardcoded calibrators
         is_ToO = self.get_ToO_selection()
-        return ((~is_ToO)
+        return (
+                (~is_ToO)
                 & (self.master_table["sb_state"] == "Waiting")
                 & (self.master_table["sb_state_flag"] == "ForCalibrator")
                 & (~self.master_table["should_be_Waiting"])
-                & (self.master_table["hardcoded_calibrators"] == ""))
+                #depending on how the master_table was read, empty string might
+                #be converted to NA (e.g. with read_csv), so need to cover that:
+                & (self.master_table["hardcoded_calibrators"] == "")
+                  |(self.master_table["hardcoded_calibrators"].isna())
+                )
 
     def get_table_base(self,state_change):
         return f"set_to_{state_change['targetState']+state_change['targetSubstate']}_{self.campaign_name}"

@@ -7,7 +7,8 @@ Created on Tue Mar 17 23:23:40 2026
 """
 
 from batch_simulations.utils.get_calibrator_candidates_wrapper import\
-        GetCalibratorCandidatesWrapper,CalibratorCandidate
+        GetCalibratorCandidatesWrapper
+from batch_simulations.infrastructure.calibrator_query import CalibratorCandidate
 import pytest
 from pathlib import Path
 from dataclasses import fields
@@ -43,15 +44,16 @@ class TestGetCalibratorCandidatesWrapper:
         max_cmd = self.general_get_cal_candidates.construct_command(
                       integration_time=int_time, array_config=array_config,
                       search_radius=search_radius,epoch=epoch,calibrator_type=calibrator_type,
-                      spectral_spec=spectral_spec,src=src,no_spwavg=no_spwavg)
+                      spectral_spec=spectral_spec,src=src,no_spwavg=no_spwavg,
+                      maxAge=10)
         assert max_cmd == ["getCalibratorCandidates.py", self.mock_xml_filepath, "-t", str(int_time),
                            "-C", array_config, "-r", str(search_radius), "-e",
                            epoch, "-c", calibrator_type,f"--spectralSpec={spectral_spec}",
-                           f"--src={src}","--no_spwavg"]
+                           f"--src={src}","--no_spwavg","--maxAge=10"]
         with pytest.raises(ValueError):
             self.general_get_cal_candidates.construct_command(
-                     integration_time=int_time, array_config=array_config, calibrator_type="bandpass",
-                     no_spwavg=True)
+                     integration_time=int_time, array_config=array_config,
+                     calibrator_type="bandpass",no_spwavg=True)
 
     def get_calibrator_candidates(self,filename):
         filepath = self.test_output_folder / filename

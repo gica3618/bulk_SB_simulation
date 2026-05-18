@@ -17,6 +17,8 @@ from pathlib import Path
 from collections import Counter
 
 
+#TODO allow different dates for 12m and 7m
+
 class SimulationCampaign:
 
     def __init__(self, name, sb_table, date):
@@ -90,7 +92,10 @@ class CampaignResultFormatter:
     def add_hardcoded_calibrators(row, sb):
         hardcoded_calibrators = [c.cal_type for c in sb.calibrators if
                                  c.is_hardcoded]
-        row["hardcoded_calibrators"] = ", ".join(hardcoded_calibrators)
+        if hardcoded_calibrators:
+            row["hardcoded_calibrators"] = ", ".join(hardcoded_calibrators)
+        else:
+            row["hardcoded_calibrators"] = pd.NA
 
     @staticmethod
     def add_individual_calibrators(row,sb):
@@ -98,7 +103,7 @@ class CampaignResultFormatter:
             if cal_type in sb.cal_types:
                 row[cal_type] = sb.get_calibrator(cal_type).source_name
             else:
-                row[cal_type] = None
+                row[cal_type] = pd.NA
 
     @staticmethod
     def add_HA_limits(row, sb):
@@ -122,7 +127,9 @@ class CampaignResultFormatter:
             unexpected_error = sb_sim_summary.unexpected_error
             row["simulations"] = unexpected_error["error_message"]
             row["traceback_of_unexpected_error"] = unexpected_error["full_traceback"]
-        row["inspection_reasons"] = "; ".join(sb_sim_summary.analysis_result.inspection_reasons)
+        inspection_reasons = sb_sim_summary.analysis_result.inspection_reasons
+        row["inspection_reasons"] = ("; ".join(inspection_reasons) if inspection_reasons
+                                     else pd.NA)
         row["should_be_Waiting"] = sb_sim_summary.analysis_result.should_be_Waiting
 
     @staticmethod
@@ -142,7 +149,7 @@ class CampaignResultFormatter:
                                         output_dir=output_dir)
 
     def need_inspection_master_table_selection(self):
-        return self.master_table["inspection_reasons"] != ""
+        return ~self.master_table["inspection_reasons"].isna()
 
     def write_table_for_P2G(self,out_format,output_dir="."):
         need_inspection = self.need_inspection_master_table_selection()
@@ -174,27 +181,37 @@ class CampaignResultFormatter:
     @staticmethod
     def get_count_lines(reasons):
         counts = Counter(reasons)
+        if len(counts) == 0:
+            return "None\n"
         return "\n".join([f"{reason}: {count}" for reason,count in counts.most_common()]) + "\n"
 
     def summarize_inspection_reasons(self):
         inspection_reasons = []
         for sim_summary in self.campaign.sb_simulation_summaries:
             inspection_reasons += sim_summary.analysis_result.inspection_reasons
+        #for unnecessarily restricted HA, the reason is something like
+        #"unnecessarily restricted HA(s): -3.5, 2, 2.5"
+        res_HA = "unnecessarily restricted HA(s)"
+        inspection_reasons = [res_HA if res_HA in reason else reason for reason
+                              in inspection_reasons]
         return "inspection reasons:\n" + self.get_count_lines(inspection_reasons)
 
     @staticmethod
     def get_fail_reasons_per_SB(sb_simulation_summaries):
         fail_reasons = []
         for sim_summary in sb_simulation_summaries:
-            sb_fail_reasons = []
-            #iterate over HAs:
-            for result in sim_summary.simulation_results:
-                if not result.success:
-                    if result.fail_reason.category == "missing calibrator":
-                        sb_fail_reasons.append(result.fail_reason.error_summary)
-                    else:
-                        sb_fail_reasons.append(result.fail_reason.category)
-            fail_reasons += list(set(sb_fail_reasons))
+            if sim_summary.simulation_results is None:
+                fail_reasons.append(sim_summary.unexpected_error["error_message"])
+            else:
+                #no unexpected error; iterate over HAs:
+                sb_fail_reasons = []
+                for result in sim_summary.simulation_results:
+                    if not result.success:
+                        if result.fail_reason.category == "missing calibrator":
+                            sb_fail_reasons.append(result.fail_reason.error_summary)
+                        else:
+                            sb_fail_reasons.append(result.fail_reason.category)
+                fail_reasons += list(set(sb_fail_reasons))
         return fail_reasons
 
     def summarize_fail_reasons(self):
@@ -211,9 +228,10 @@ class CampaignResultFormatter:
         return out
 
     def write_campaign_summary(self,output_dir="."):
+        logging.info("going to write campaign summary to disk")
         lines = [f"summary of campaign '{self.campaign.name}'\n",
                  f"simulated observing date: {self.campaign.date}\n",
-                 f"campaign run time: {self.campaign.run_time.total_seconds()/3600} h\n"]
+                 f"campaign run time: {self.campaign.run_time.total_seconds()/3600:.2g} h\n"]
         lines.append(self.summarize_number_of_simulated_SBs())
         lines.append(self.summarize_unexpected_errors())
         lines.append(self.summarize_number_of_inspections())

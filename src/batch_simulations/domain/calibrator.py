@@ -23,7 +23,9 @@ calibrator_keywords = {cal:[cal,cal.lower()] for cal in CALIBRATOR_TYPES}
 def classify_calibrator(name):
     candidate_cal_types = []
     for cal,keywords in calibrator_keywords.items():
-        if any([keyword in name for keyword in keywords]):
+        #I don't want to read "Bandpass pointing" etc.
+        #these appear sometimes, e.g. Circinus_a_04_TM1 of project 2025.1.00238.S
+        if any([keyword in name for keyword in keywords]) and "pointing" not in name.lower():
             candidate_cal_types.append(cal)
     if len(candidate_cal_types) == 0:
         logging.info(f"Source '{name}' is not a calibrator")

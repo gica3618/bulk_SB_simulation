@@ -199,6 +199,22 @@ def test_read_calibrators():
             J1326 = [c for c in hardcoded_calibrators if c.source_name == "J1326-5256"][0]
             assert J1326.coordinates.ra.deg == 201.705121313
             assert J1326.coordinates.dec.deg == -52.939898125
+    #case with more than two observing groups:
+    xml = get_xml("three_observing_groups.xml")
+    calibrators = xml.read_calibrators_from_observing_groups()
+    assert len(calibrators) == 2
+    phase = get_calibrator(calibrators=calibrators, cal_type="Phase")
+    bandpass = get_calibrator(calibrators=calibrators, cal_type="Bandpass")
+    assert phase.source_name == "J0725+1425"
+    assert bandpass.source_name == "query"
+    xml = get_xml("five_observing_groups.xml")
+    calibrators = xml.read_calibrators_from_observing_groups()
+    assert len(calibrators) == 2
+    phase = get_calibrator(calibrators=calibrators, cal_type="Phase")
+    bandpass = get_calibrator(calibrators=calibrators, cal_type="Bandpass")
+    assert phase.source_name == "query"
+    assert bandpass.source_name == "J0120-2701"
+    
 
 def test_note_to_aod():
     xml = get_xml("example_cycle10_7m_2023.1.01099.S.xml")

@@ -32,5 +32,6 @@ def test_classify_calibrator():
         assert classify_calibrator(cal_type.lower()) == cal_type
         assert classify_calibrator(f"{cal_type} calibrator") == cal_type
     assert classify_calibrator("J123") is None
+    assert classify_calibrator("Bandpass pointing") is None
     with pytest.raises(ValueError):
         classify_calibrator("Bandpass Phase calibrator hahahah")

@@ -32,6 +32,12 @@ class JobPlanner:
             #don't do "HA -= step" here, as this leads to modification of all
             #HAs already in the list:
             HA = HA - step
+        #make sure min HA considered by DSA is included
+        if self.DSA_HA["min"] not in HAs:
+            HAs.append(self.DSA_HA["min"])
+        for key in ("min","max"):
+            if self.DSA_HA[key] not in HAs:
+                raise RuntimeError(f"{key} HA considered by DSA not in planned HAs")
         return sorted(HAs)
 
     def HA_jobs(self, xml_filepath, array_config, date, step):

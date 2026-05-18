@@ -106,8 +106,14 @@ class OT_XML():
     def get_ordered_target_part_ids(self):
         observing_groups = self.root.findall("sbl:ObservingGroup",
                                              namespaces=self.namespaces)
-        if len(observing_groups) != 2: #Calibrators and Science
-            raise ValueError("expected exactly 2 observing groups")
+        # if len(observing_groups) != 2: #Calibrators and Science
+        #     raise ValueError("expected exactly 2 observing groups")
+        if len(observing_groups) <= 1:
+            #usually there are two observing groups ("Calibrators" and "Science"),
+            #but if several tunings are needed (e.g. for clusters of sources),
+            #then more than two observing groups are possible
+            #see e.g. UGC04197_a_07_7M of project 2025.1.00915.S
+            raise ValueError("expected at least 2 observing groups")
         ordered_target_partIDs = []
         for obs_group in observing_groups:
             obs_group_name = obs_group.findtext("sbl:name",namespaces=self.namespaces)

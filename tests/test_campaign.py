@@ -98,23 +98,33 @@ class TestCampaignResultFormatter:
         assert row["note_to_AoD"] == self.test_sb.metadata["note_to_AoD"]
 
     def test_add_hardcoded_calibrators(self):
+        #SB without hardcoded calibrators:
        row = {}
        CampaignResultFormatter.add_hardcoded_calibrators(row=row,sb=self.test_sb)
        assert len(row) == 1
-       hardcoded_calibrators = [c.cal_type for c in self.test_sb.calibrators if
+       assert row["hardcoded_calibrators"] is pd.NA
+       #SB with hardcoded calibrators:
+       row = {}
+       sb = BuildSBFromXML.build("tests/xmls/example_bandpass_equal_dgc.xml")
+       CampaignResultFormatter.add_hardcoded_calibrators(row=row,sb=sb)
+       hardcoded_calibrators = [c.cal_type for c in sb.calibrators if
                                 c.is_hardcoded]
-       expected_entry = ",".join(hardcoded_calibrators)
+       assert hardcoded_calibrators
+       expected_entry = ", ".join(hardcoded_calibrators)
+       assert len(row) == 1
        assert row["hardcoded_calibrators"] == expected_entry
 
     def test_add_individual_calibrators(self):
         row = {}
-        CampaignResultFormatter.add_individual_calibrators(row=row,sb=self.test_sb)
+        sb = BuildSBFromXML.build("tests/xmls/example_bandpass_equal_dgc.xml")
+        assert sb.any_calibrator_hardcoded()
+        CampaignResultFormatter.add_individual_calibrators(row=row,sb=sb)
         assert len(row) == len(CALIBRATOR_TYPES)
         for cal_type in CALIBRATOR_TYPES:
-            if cal_type in self.test_sb.cal_types:
-                assert row[cal_type] == self.test_sb.get_calibrator(cal_type).source_name
+            if cal_type in sb.cal_types:
+                assert row[cal_type] == sb.get_calibrator(cal_type).source_name
             else:
-                assert row[cal_type] is None
+                assert row[cal_type] is pd.NA
 
     def test_add_HA_limits(self):
         local_test_sb = BuildSBFromXML.build("tests/xmls/2025.1.01279.S_general_SB.xml")
@@ -154,20 +164,24 @@ class TestCampaignResultFormatter:
             def __init__(self,unexpected_error,analysis_result):
                 self.unexpected_error = unexpected_error
                 self.analysis_result = analysis_result
-        fake_formatter = FakeFormatter()
-        row = {}
-        sb_sim_summary = FakeSBSummary(unexpected_error=None,
-                                       analysis_result = AnalysisResult(inspection_reasons=["simulation failure"],
-                                                                        should_be_Waiting=True))
-        fake_formatter.add_simulation_info(row=row,sb_sim_summary=sb_sim_summary)
-        assert len(row) == 5
-        assert row["simulated_config"] == FakeSBSummary.config
-        assert row["simulated_date"] == str(self.date)
-        assert row["simulations"] == CampaignResultFormatter.build_per_HA_summary_string(
-                                      simulation_results=FakeSBSummary.simulation_results,
-                                      HAs=FakeSBSummary.HAs)
-        assert row["inspection_reasons"] == "simulation failure"
-        assert row["should_be_Waiting"]
+        for inspection_reasons in (["simulation failure"],[]):
+            fake_formatter = FakeFormatter()
+            row = {}
+            sb_sim_summary = FakeSBSummary(unexpected_error=None,
+                                           analysis_result = AnalysisResult(inspection_reasons=inspection_reasons,
+                                                                            should_be_Waiting=True))
+            fake_formatter.add_simulation_info(row=row,sb_sim_summary=sb_sim_summary)
+            assert len(row) == 5
+            assert row["simulated_config"] == FakeSBSummary.config
+            assert row["simulated_date"] == str(self.date)
+            assert row["simulations"] == CampaignResultFormatter.build_per_HA_summary_string(
+                                          simulation_results=FakeSBSummary.simulation_results,
+                                          HAs=FakeSBSummary.HAs)
+            if inspection_reasons:
+                assert row["inspection_reasons"] == "simulation failure"
+            else:
+                assert row["inspection_reasons"] is pd.NA
+            assert row["should_be_Waiting"]
         #case with unexpected error:
         unexpected_error = {"error_message":"kabumm","full_traceback":"the full traceback"}
         row = {}
@@ -272,7 +286,7 @@ class TestCampaignResultFormatterSummaryFile:
 
     def test_need_inspection_selection(self):
         class FakeFormatter:
-            master_table = pd.DataFrame({"inspection_reasons":["","problem","","","Asterix"]})
+            master_table = pd.DataFrame({"inspection_reasons":[pd.NA,"problem",pd.NA,pd.NA,"Asterix"]})
             need_inspection_master_table_selection\
                    = CampaignResultFormatter.need_inspection_master_table_selection
         fake = FakeFormatter()
@@ -305,7 +319,7 @@ class TestCampaignResultFormatterSummaryFile:
 
     def test_summarize_number_of_inspections(self):
         class FakeFormatter:
-            master_table = pd.DataFrame({"inspection_reasons":["","problem","","","Asterix"]})
+            master_table = pd.DataFrame({"inspection_reasons":[pd.NA,"problem",pd.NA,pd.NA,"Asterix"]})
             need_inspection_master_table_selection\
                      = CampaignResultFormatter.need_inspection_master_table_selection
             summarize_number_of_inspections = CampaignResultFormatter.summarize_number_of_inspections
@@ -317,20 +331,23 @@ class TestCampaignResultFormatterSummaryFile:
         count_lines = CampaignResultFormatter.get_count_lines(reasons)
         assert count_lines == "Asterix: 2\n"+"no check: 2\n"+"Obelix: 1\n"\
                                +"no phase: 1\n"
+        reasons = []
+        assert CampaignResultFormatter.get_count_lines(reasons) == "None\n"
 
     def test_summarize_inspection_reasons(self):
         class FakeFormatter:
             sb_simulation_summaries = [FakeSimSummary(inspection_reasons=None),
                                        FakeSimSummary(inspection_reasons=["error 1", "error 2"]),
                                        FakeSimSummary(inspection_reasons=["error 1"]),
-                                       FakeSimSummary(inspection_reasons=["error 3"])]
+                                       FakeSimSummary(inspection_reasons=["unnecessarily restricted HA(s): -3.5, -2"])]
             campaign = SimpleNamespace(sb_simulation_summaries=sb_simulation_summaries)
             summarize_inspection_reasons = CampaignResultFormatter.summarize_inspection_reasons
             @staticmethod
             def get_count_lines(reasons):
                 return CampaignResultFormatter.get_count_lines(reasons)
         summary = FakeFormatter().summarize_inspection_reasons()
-        assert summary == "inspection reasons:\nerror 1: 2\n" + "error 2: 1\n" + "error 3: 1\n"
+        assert summary == ("inspection reasons:\nerror 1: 2\n" + "error 2: 1\n"
+                           + "unnecessarily restricted HA(s): 1\n")
 
     def test_get_fail_reasons_per_SB(self):
         sb_simulation_summaries = [FakeSimSummary(include_2h_fail=True),
@@ -340,6 +357,16 @@ class TestCampaignResultFormatterSummaryFile:
         assert fail_reasons.count("no check") == 2
         assert fail_reasons.count("no phase") == 2
         assert fail_reasons.count("exceeds 2h limit") == 1
+
+    def test_get_fail_reasons_per_SB_unexpected_error(self):
+        sb_simulation_summaries = [SimpleNamespace(simulation_results=None,
+                                                   unexpected_error={"error_message":"Asterix"}),]*2
+        sb_simulation_summaries.append(SimpleNamespace(simulation_results=None,
+                                                       unexpected_error={"error_message":"Miraculix"}))
+        fail_reasons = CampaignResultFormatter.get_fail_reasons_per_SB(sb_simulation_summaries)
+        assert len(fail_reasons) == 3
+        assert fail_reasons.count("Asterix") == 2
+        assert fail_reasons.count("Miraculix") == 1
 
 
     def test_summarize_fail_reasons(self):

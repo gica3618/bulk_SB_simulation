@@ -17,6 +17,7 @@ import pytest
 import re
 import numpy as np
 import logging
+from types import SimpleNamespace
 
 
 sb_table_folder = Path("tests/input_tables")
@@ -26,24 +27,24 @@ sb_table_array_config_12m = "c43-5"
 
 
 class FakeWriter:
-    analyse_state_updates = Writer.analyse_state_updates
     get_ToO_selection = Writer.get_ToO_selection
     get_selection_for_setting_to_Waiting = Writer.get_selection_for_setting_to_Waiting
     get_selection_for_setting_to_Ready = Writer.get_selection_for_setting_to_Ready
     merge_with_up_to_date_sb_table = Writer.merge_with_up_to_date_sb_table
     update_master_table = Writer.update_master_table
     @staticmethod
-    def check_missing_sb_state(merged):
-        return Writer.check_missing_sb_state(merged)
-    @staticmethod
     def analyse_number_of_updates(merged):
         return Writer.analyse_number_of_updates(merged)
+    @staticmethod
+    def remove_missing(merged):
+        return Writer.remove_missing(merged)
     def __init__(self):
         #it's important to make a new table each time a new instance is created,
         #because inside some tests, the table is modified inplace
         self.up_to_date_sb_table = SBTable(input_filepaths=sb_table_filepaths,
                                            array_config_12m=sb_table_array_config_12m,
                                            SB_filter=None)
+
 
 class TestProTrackStateChangeWriter:
 
@@ -87,14 +88,30 @@ class TestProTrackStateChangeWriter:
         assert merged.sb_state_updated.isna()[0]
         assert not merged.sb_state_updated[1:].isna().any()
 
-    def test_check_missing_sb_state(self):
-        merged = pd.DataFrame({"sb_state_updated":["Ready","Waiting"],
-                               "sb_uid":["uid:1","uid:2"]})
-        Writer.check_missing_sb_state(merged)
-        merged.at[0,"sb_state_updated"] = pd.NA
-        match = re.escape("SB UIDs missing in the up-to-date table: ['uid:1']")
-        with pytest.raises(ValueError,match=match):
-            Writer.check_missing_sb_state(merged)
+    def test_remove_missing(self):
+        up_to_date_sb_table = SimpleNamespace(data=pd.DataFrame({"sb_state":["Ready","Waiting"],
+                                                                 "sb_state_flag":[pd.NA,"ForCalibrator"],
+                                                                 "sb_uid":["uid:1","uid:2"]}))
+        master_table = pd.DataFrame({"sb_state":["Ready","Waiting","Ready"],
+                                     "sb_state_flag":[pd.NA,"ForCalibrator",pd.NA],
+                                     "sb_uid":["uid:1","uid:2","uid:3"]})
+        fake_writer = FakeWriter()
+        fake_writer.up_to_date_sb_table = up_to_date_sb_table
+        fake_writer.master_table = master_table
+        merged = fake_writer.merge_with_up_to_date_sb_table()
+        assert merged[merged["sb_uid"]=="uid:3"]["sb_state_updated"].isna().all()
+        missing_removed = fake_writer.remove_missing(merged)
+        assert len(missing_removed) == 2
+        assert "uid:3" not in missing_removed.sb_uid
+
+    # def test_check_missing_sb_state(self):
+    #     merged = pd.DataFrame({"sb_state_updated":["Ready","Waiting"],
+    #                            "sb_uid":["uid:1","uid:2"]})
+    #     Writer.check_missing_sb_state(merged)
+    #     merged.at[0,"sb_state_updated"] = pd.NA
+    #     match = re.escape("SB UIDs missing in the up-to-date table: ['uid:1']")
+    #     with pytest.raises(ValueError,match=match):
+    #         Writer.check_missing_sb_state(merged)
 
     def test_analyse_number_of_updates(self,caplog):
         merged = pd.DataFrame({"sb_state":["Ready","Ready","Waiting","Waiting","Waiting"],
@@ -106,15 +123,15 @@ class TestProTrackStateChangeWriter:
         messages = [record.getMessage() for record in caplog.records]
         assert messages == ["updated 3/5 states"]
 
-    def test_analyse_state_updates(self):
-        #just testing that it runs
-        merged = pd.DataFrame({"sb_state":["Ready","Waiting"],
-                               "sb_state_flag":[pd.NA,"ForP2G"],
-                               "sb_state_updated":["Ready","Waiting"],
-                               "sb_state_flag_updated":[pd.NA,"ForJAO"],
-                               "sb_uid":["uid:1","uid:2"]})
-        fake_writer = FakeWriter()
-        fake_writer.analyse_state_updates(merged=merged)
+    # def test_analyse_state_updates(self):
+    #     #just testing that it runs
+    #     merged = pd.DataFrame({"sb_state":["Ready","Waiting"],
+    #                            "sb_state_flag":[pd.NA,"ForP2G"],
+    #                            "sb_state_updated":["Ready","Waiting"],
+    #                            "sb_state_flag_updated":[pd.NA,"ForJAO"],
+    #                            "sb_uid":["uid:1","uid:2"]})
+    #     fake_writer = FakeWriter()
+    #     fake_writer.analyse_state_updates(merged=merged)
 
     def test_update_master_table(self):
         fake_writer = FakeWriter()
@@ -167,6 +184,7 @@ class TestProTrackStateChangeWriter:
                     "sb_state_flag":"ForCalibrator",
                     "should_be_Waiting":False,
                     "hardcoded_calibrators":""}
+        hardcoded_None = self.generate_row(template=template,hardcoded_calibrators=None)
         ToO = self.generate_row(template=template,code="2013.1.01245.T")
         already_ready = self.generate_row(template=template,sb_state="Ready")
         waiting_JAO = self.generate_row(template=template,sb_state_flag="WaitingForJAO")
@@ -175,11 +193,12 @@ class TestProTrackStateChangeWriter:
                                           hardcoded_calibrators="Polarization; Bandpass")
         combination = self.generate_row(template=template,sb_state="Ready",
                                         hardcoded_calibrators="Bandpass")
-        fake_writer.master_table = pd.DataFrame([template,ToO,already_ready,waiting_JAO,
+        fake_writer.master_table = pd.DataFrame([template,hardcoded_None,ToO,
+                                                 already_ready,waiting_JAO,
                                                  should_be_waiting,has_hardcoded,
                                                  combination])
         selection = fake_writer.get_selection_for_setting_to_Ready()
-        assert list(selection) == [True,]+[False]*6
+        assert list(selection) == [True,]*2+[False]*6
 
     def test_get_table_base(self):
         class Fake:
