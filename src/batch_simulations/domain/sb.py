@@ -8,15 +8,18 @@ Created on Thu Mar  5 15:37:27 2026
 
 from collections import Counter
 import logging
+from scipy import constants
 from batch_simulations.domain.dsa_ha_policy import DSAHourAnglePolicy
 
 
 class SB:
 
-    def __init__(self, calibrators, mode_name, nominal_configs,
-                 rep_coord, OT_allowed_HA, requires_TP, metadata=None):
+    def __init__(self, calibrators, science_targets, mode_name, nominal_configs,
+                 rep_coord, OT_allowed_HA, requires_TP, total_execution_time,
+                 number_of_executions,metadata=None):
         self.metadata = metadata or {}
         self.calibrators = calibrators
+        self.science_targets = science_targets
         self.cal_types = [c.cal_type for c in self.calibrators]
         self.mode_name = mode_name
         self.is_Polarisation = "Polarization" in mode_name
@@ -29,6 +32,8 @@ class SB:
         self.rep_coord = rep_coord
         self.OT_allowed_HA = OT_allowed_HA
         self.requires_TP = requires_TP
+        self.total_execution_time = total_execution_time
+        self.number_of_executions = number_of_executions
         self.consistency_checks()
 
     def consistency_checks(self):
@@ -39,6 +44,8 @@ class SB:
                 #calibrators of the same type, because those calibrators all
                 #point to the same field source in the xml
                 raise ValueError(f"multiple calibrators of type {cal_type}")
+        if len(self.science_targets) < 1:
+            raise ValueError("at least one science target expected")
         if self.is_Polarisation and self.has_no_PolCal():
             raise ValueError("Polarization SB without PolCal")
         if self.is_Polarisation and (not self.PolCal_is_hardcoded()):
@@ -69,7 +76,19 @@ class SB:
         return any([c.is_hardcoded for c in self.calibrators])
 
     def get_DSA_HA_limits(self):
-        return DSAHourAnglePolicy.compute(sb=self)
+        return DSAHourAnglePolicy.compute_min_max_HA(sb=self)
 
     def add_metadata(self,key,value):
         self.metadata[key] = value
+
+    def single_execution_time(self):
+        single_exec = self.total_execution_time/self.number_of_executions
+        if self.is_Polarisation:
+            #polarisation execution (session) should be at least 3 hours
+            min_number_of_executions = ((3*constants.hour) // single_exec) + 1
+            session_duration = single_exec*min_number_of_executions
+            if session_duration < 3*constants.hour:
+                raise ValueError("session duration less than 3 hours")
+            return session_duration
+        else:
+            return single_exec

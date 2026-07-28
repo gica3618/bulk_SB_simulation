@@ -64,6 +64,11 @@ class FailReason:
             return cls(error_message=error_message,error_summary=error_summary,
                        category="unobservable")
 
+        if error_message.startswith("Exception: Specified elevation") and\
+                                   error_message.endswith("is out of range."):
+            return cls(error_message=error_message,error_summary="elevation out of range",
+                       category="unobservable")
+
         if ("unexpected response from the source catalogue" in error_message)\
                    or ("socket.gaierror" in error_message):
             return cls(error_message=error_message,error_summary=error_message,
@@ -75,8 +80,8 @@ class FailReason:
 
 @dataclass
 class SimulationResult:
-    executed_command: str
-    output_folder: Path
+    executed_command: str | None
+    output_folder: Path | None
     xml_filename: str
     success: bool
     fail_reason: FailReason | None

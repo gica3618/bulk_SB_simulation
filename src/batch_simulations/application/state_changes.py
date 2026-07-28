@@ -106,8 +106,8 @@ class ProTrackStateChangeWriter:
                 & (~self.master_table["should_be_Waiting"])
                 #depending on how the master_table was read, empty string might
                 #be converted to NA (e.g. with read_csv), so need to cover that:
-                & (self.master_table["hardcoded_calibrators"] == "")
-                  |(self.master_table["hardcoded_calibrators"].isna())
+                & ((self.master_table["hardcoded_calibrators"] == "")
+                   |(self.master_table["hardcoded_calibrators"].isna()))
                 )
 
     def get_table_base(self,state_change):
@@ -115,9 +115,9 @@ class ProTrackStateChangeWriter:
 
     def write_state_change_tables(self,state_change,output_dir="."):
         sc = state_change
-        base = self.get_table_base(state_change=state_change)
         human_readable = self.master_table[sc["selection"]]
         writer = TableWriter()
+        base = self.get_table_base(state_change=state_change)
         writer.write_table_to_disk(dataframe=human_readable,filename=f"{base}.csv",
                                    output_dir=output_dir)
         writer.write_ProTrack_csv(table=self.master_table,

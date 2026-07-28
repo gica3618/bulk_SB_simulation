@@ -42,5 +42,5 @@ class SimulationRunner:
                          sleep_time=self.sleep_time,
                          retry_condition=retry_condition)
 
-    def run_jobs(self,jobs):
-        return [self.run(job) for job in jobs] 
+    # def run_jobs(self,jobs):
+    #     return [self.run(job) for job in jobs] 

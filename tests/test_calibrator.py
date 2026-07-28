@@ -15,10 +15,12 @@ from astropy import units as u
 
 def test_calibrator():
     coord = SkyCoord(ra=10*u.deg,dec=-2*u.deg)
-    Calibrator(name="test", source_name="query", cal_type="Bandpass",
-               is_hardcoded=False,coordinates=None)
-    Calibrator(name="test", source_name="J123", cal_type="DGC",
-               is_hardcoded=True,coordinates=coord)
+    cal = Calibrator(name="test", source_name="query", cal_type="Bandpass",
+                     is_hardcoded=False,coordinates=None)
+    assert not cal.is_DGC()
+    cal = Calibrator(name="test", source_name="J123", cal_type="DGC",
+                     is_hardcoded=True,coordinates=coord)
+    assert cal.is_DGC()
     with pytest.raises(ValueError):
         Calibrator(name="test", source_name="query", cal_type="Bandpass123",
                    is_hardcoded=False,coordinates=None)

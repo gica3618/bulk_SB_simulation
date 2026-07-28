@@ -15,9 +15,13 @@ import pandas as pd
 import datetime
 from pathlib import Path
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+from itertools import repeat
 
 
 #TODO allow different dates for 12m and 7m
+#TODO parallelise using ThreadPoolExecutor
+
 
 class SimulationCampaign:
 
@@ -26,18 +30,31 @@ class SimulationCampaign:
         self.sb_table = sb_table
         self.date = date
 
+    def run_single_sb(self,i,row, single_sb_sim_cls):
+        #IMPORTANT: since this is the method that is parallelised, it should not
+        #write to self! if several threads write to self simultaneously, bad things
+        #may happen. On the other hand, it is allowed to read self
+        logging.info(f"Running SB {i}/{len(self.sb_table.data)}: {row.sbname} {row.code}")
+        sim = single_sb_sim_cls(project_code=row.code,sb_name=row.sbname,
+                                date=self.date,
+                                array_config_12m=self.sb_table.array_config_12m)
+        summary = sim.simulate()
+        summary.analyse()
+        return summary
+
     def run(self,single_sb_sim_cls=SingleSBSimulation):
         self.sb_simulation_summaries = []
         start = datetime.datetime.now()
-        for i, row in enumerate(self.sb_table.data.itertuples(), start=1):
-            logging.info(f"Running SB {i}/{len(self.sb_table.data)}: {row.sbname} {row.code}")
-            single_sb_sim = single_sb_sim_cls(
-                                 project_code=row.code, sb_name=row.sbname,
-                                 date=self.date,
-                                 array_config_12m=self.sb_table.array_config_12m)
-            sim_summary = single_sb_sim.simulate()
-            sim_summary.analyse()
-            self.sb_simulation_summaries.append(sim_summary)
+        map_args = (self.run_single_sb, range(1,len(self.sb_table.data)+1),
+                    self.sb_table.data.itertuples(),repeat(single_sb_sim_cls))
+        with ThreadPoolExecutor() as executor:
+            self.sb_simulation_summaries = list(executor.map(*map_args))
+        # for i, row in enumerate(self.sb_table.data.itertuples(), start=1):
+        #     sim_summary = self.run_single_sb(
+        #                          row=row, date=self.date,
+        #                          array_config_12m=self.sb_table.array_config_12m,
+        #                          single_sb_sim_cls=single_sb_sim_cls)
+        #     self.sb_simulation_summaries.append(sim_summary)
         end = datetime.datetime.now()
         self.run_time = end-start
 
@@ -112,9 +129,10 @@ class CampaignResultFormatter:
         HA_DSA = sb.get_DSA_HA_limits()
         for lim in ("min", "max"):
             row[f"{lim}_HA_DSA"] = HA_DSA[lim].hour
+        tol = 1e-10 #rad; needed because of machine precision rounding errors
         row["HA_is_restricted"] = (
-            sb.OT_allowed_HA["min"] > HA_DSA["min"]
-            or sb.OT_allowed_HA["max"] < HA_DSA["max"])
+            sb.OT_allowed_HA["min"].rad - tol > HA_DSA["min"].rad
+                  or sb.OT_allowed_HA["max"].rad + tol < HA_DSA["max"].rad)
 
     def add_simulation_info(self, row, sb_sim_summary):
         if sb_sim_summary.unexpected_error is None:

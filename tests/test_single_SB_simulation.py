@@ -10,13 +10,15 @@ from unittest.mock import patch
 import datetime
 from pathlib import Path
 from types import SimpleNamespace
-from astropy.coordinates import Angle
+from astropy.coordinates import Angle,SkyCoord
 from astropy import units as u
 from batch_simulations.application.single_SB_simulation import SingleSBSimulation,\
     AnalysisResult, SingleSBSimulationSummary,get_unnecessarily_restricted_HAs
 from batch_simulations.domain.simulation_result import FailReason
+from batch_simulations.domain.calibrator import Calibrator
 from batch_simulations.infrastructure.OT_xml import BuildSBFromXML
 import itertools
+from scipy import constants
 
 
 def test_get_unnecessarily_restricted_HAs():
@@ -77,7 +79,7 @@ class TestSingleSBSimulation:
         sb.requires_TP = False
         assert self.general_sb_simulation.get_array_config(sb) == "7m"
 
-    def test_simulate_again_with_fine_HA_step(self):
+    def test_should_simulate_again_with_fine_HA_step(self):
         class Result:
             def __init__(self, success):
                 self.success = success
@@ -85,7 +87,7 @@ class TestSingleSBSimulation:
         all_success = [Result(True), Result(True)]
         HAs = [Angle(-1*u.hour),Angle(1*u.hour)]
         OT_allowed_HA = {"min":Angle(-12*u.hour),"max":Angle(12*u.hour)}
-        sim_again = SingleSBSimulation.simulate_again_with_fine_HA_step
+        sim_again = SingleSBSimulation.should_simulate_again_with_fine_HA_step
         #case where HA is not unnecessarily restricted:
         for hard in (True,False):
             assert not sim_again(results=all_success,HAs=HAs,has_hardcoded_cals=hard,
@@ -101,6 +103,47 @@ class TestSingleSBSimulation:
         assert not sim_again(results=all_success,HAs=HAs,has_hardcoded_cals=True,
                              OT_allowed_HA=OT_allowed_HA)
 
+    def test_get_targets_for_elevation_check(self):
+        class FakeSB:
+            science_targets = [{"name":"miraculix",
+                                "coordinates":SkyCoord('05h47m17.08s', '-51d03m59.44s')},
+                               {"name":"weissnix",
+                                "coordinates":SkyCoord('10h47m17.08s', '-71d03m59.44s')}]
+            calibrators = [Calibrator(name="Phase",source_name="J1326-5256",
+                                      cal_type="Phase",is_hardcoded=True,
+                                      coordinates=SkyCoord('05h00m00s', '-53d00m00s')),
+                           Calibrator(name="Bandpass calibrator",source_name="query",
+                                      cal_type="Bandpass",is_hardcoded=False,
+                                      coordinates=None),
+                           Calibrator(name="DGC",source_name="asterix",
+                                      cal_type="DGC",is_hardcoded=True,
+                                      coordinates=SkyCoord('08h00m00s', '-20d00m00s'))]
+        sb = FakeSB()
+        targets = SingleSBSimulation.get_targets_for_elevation_check(sb)
+        assert len(targets) == 4
+        for i in (0,1):
+            assert targets[i] == {"name":FakeSB.science_targets[i]["name"],
+                                  "DEC":FakeSB.science_targets[i]["coordinates"].dec,"DGC":False}
+        assert targets[2] == {"name":"Phase","DEC":FakeSB.calibrators[0].coordinates.dec,"DGC":False}
+        assert targets[3] == {"name":"DGC","DEC":FakeSB.calibrators[2].coordinates.dec,"DGC":True}        
+
+    def test_get_targets_beyond_elevation_limits(self,monkeypatch):
+        targets = [{"name":"dgc miraculix","DEC":SkyCoord('00h00m00s', '-10d00m00s').dec,
+                    "DGC":True},#this should not be limited by elevation
+                   {"name":"J12345678","DEC":SkyCoord('00h00m00s', '80d00m00s').dec,
+                    "DGC":False},#this one is unobservable by ALMA
+                   {"name":"majestix","DEC":SkyCoord("00h00m0.0s","-23d46m56.772s").dec,
+                    "DGC":True},#above 85 deg for HA between -0.36h and 0.36h
+                   {"name":"majestix","DEC":SkyCoord("00h00m0.0s","-23d46m56.772s").dec,
+                    "DGC":False}#above 85 deg for HA between -0.36h and 0.36h
+                   ]
+        output = SingleSBSimulation.get_targets_beyond_elevation_limits(
+                          start_HA=Angle(-0.8*u.hour),execution_time=0.5*constants.hour,
+                          targets=targets)
+        assert len(output) == 2
+        assert output[0] == "J12345678"
+        assert output[1] == "majestix"
+
     def test_simulate_HAs(self):
         #inspired by ChatGPT
         class FakeSingleSBSimulation:
@@ -108,17 +151,32 @@ class TestSingleSBSimulation:
             date = datetime.date(1978,3,3)
             simulate_HAs = SingleSBSimulation.simulate_HAs
             @staticmethod
-            def simulate_again_with_fine_HA_step(results,HAs,has_hardcoded_cals,
+            def should_simulate_again_with_fine_HA_step(results,HAs,has_hardcoded_cals,
                                                  OT_allowed_HA):
-                return SingleSBSimulation.simulate_again_with_fine_HA_step(
+                return SingleSBSimulation.should_simulate_again_with_fine_HA_step(
                        results=results,HAs=HAs,has_hardcoded_cals=has_hardcoded_cals,
                        OT_allowed_HA=OT_allowed_HA)
+            @staticmethod
+            def get_targets_beyond_elevation_limits(start_HA,execution_time,targets):
+                return SingleSBSimulation.get_targets_beyond_elevation_limits(
+                          start_HA=start_HA,execution_time=execution_time,
+                          targets=targets)
+
+        class FakeSingleSBSimulationNoElevationCheck(FakeSingleSBSimulation):
+            @staticmethod
+            def get_targets_for_elevation_check(sb):
+                return []
+
+        class FakeSingleSBSimulationWithElevationCheck(FakeSingleSBSimulation):
+            @staticmethod
+            def get_targets_for_elevation_check(sb):
+                return [{"name":"asterix und underlix",
+                         "DEC":SkyCoord("00h00m0.0s","80d46m56.772s").dec,#not observable by ALMA
+                         "DGC":False}]
 
         class Result:
             def __init__(self, success):
                 self.success = success
-        results_with_fail = [Result(False), Result(True)]
-        results_all_success = [Result(True), Result(True)]
 
         class FakePlanner:
             default_HA_step = SingleSBSimulation.default_HA_step
@@ -133,41 +191,55 @@ class TestSingleSBSimulation:
                 return self.HA_jobs(**kwargs,step=self.fine_HA_step)
 
         class FakeRunnerFail:
-            def run_jobs(self, jobs):
-                return results_with_fail
+            def run(self,job):
+                return Result(False)
     
         class FakeRunnerSuccess:
-            def run_jobs(self, jobs):
-                return results_all_success
+            def run(self, job):
+                return Result(True)
     
         class FakeSB:
+            
+            rep_coord = SkyCoord('05h47m17.0876901s', '-51d03m59.441135s', frame='icrs')
+            
             def __init__(self,any_hardcoded,OT_allowed_HA):
                 self.any_hardcoded = any_hardcoded
                 self.OT_allowed_HA = OT_allowed_HA
             def any_calibrator_hardcoded(self):
                 return self.any_hardcoded
-    
-        single_sim = FakeSingleSBSimulation()
+            def single_execution_time(self):
+                return 0.5*constants.hour
+
         planner = FakePlanner()
-        
-        #test if success and failure:
-        sb = FakeSB(any_hardcoded=False, OT_allowed_HA={"min":Angle(-12*u.hour),
+
+        #test without elevation check:
+        single_sim = FakeSingleSBSimulationNoElevationCheck()
+        #test success and failure:
+        std_sb = FakeSB(any_hardcoded=False, OT_allowed_HA={"min":Angle(-12*u.hour),
                                                         "max":Angle(12*u.hour)})
-        kwargs = {"planner":planner,"array_config":"c43-5","sb":sb}
+        kwargs = {"planner":planner,"array_config":"c43-5","sb":std_sb}
         HAs,results = single_sim.simulate_HAs(**kwargs,runner_cls=FakeRunnerSuccess)
         assert HAs[1]-HAs[0] == SingleSBSimulation.default_HA_step
-        assert results == results_all_success
+        assert all([r.success for r in results])
         HAs,results = single_sim.simulate_HAs(**kwargs,runner_cls=FakeRunnerFail)
         assert HAs[1]-HAs[0] == SingleSBSimulation.fine_HA_step
-        assert results == results_with_fail
-        
-        #test unnecessarily restricted HA:
-        sb = FakeSB(any_hardcoded=False, OT_allowed_HA={"min":Angle(-12*u.hour),
+        assert not any([r.success for r in results])
+        #test unnecessarily restricted HA (fine HA step):
+        restricted_sb = FakeSB(any_hardcoded=False, OT_allowed_HA={"min":Angle(-12*u.hour),
                                                         "max":Angle(0*u.hour)})
-        kwargs["sb"] = sb
+        kwargs["sb"] = restricted_sb
         HAs,results = single_sim.simulate_HAs(**kwargs,runner_cls=FakeRunnerSuccess)
         assert HAs[1]-HAs[0] == SingleSBSimulation.fine_HA_step
-        assert results == results_all_success
+        assert all([r.success for r in results])
+
+        #test elevation check
+        single_sim = FakeSingleSBSimulationWithElevationCheck()
+        kwargs["sb"] = std_sb
+        HAs,results = single_sim.simulate_HAs(**kwargs,runner_cls=FakeRunnerSuccess)
+        assert HAs[1]-HAs[0] == SingleSBSimulation.fine_HA_step
+        assert not any([r.success for r in results])
+        for r in results:
+            assert r.fail_reason.error_message == "simulation skipped, elevation outside limits for: asterix und underlix"
 
     def test_simulate(self):
         class FakeJob:
@@ -255,6 +327,7 @@ class TestSingleSBSimulationSummary:
                                   SimpleNamespace(success=True),SimpleNamespace(success=True)]
             sb = SimpleNamespace(OT_allowed_HA={"min":Angle(-2*u.hour),"max":Angle(2*u.hour)})
             runnable_HA_amount = SingleSBSimulationSummary.runnable_HA_amount
+            HA_is_allowed = SingleSBSimulationSummary.HA_is_allowed
         fake_summary = FakeSummary()
         widths = fake_summary.HA_widths()
         usable_HA_range = fake_summary.runnable_HA_amount()

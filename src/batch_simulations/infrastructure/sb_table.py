@@ -36,7 +36,10 @@ class SBTable:
     def check_data_consistency(self):
         if self.data["sb_uid"].duplicated().any():
             raise ValueError("Duplicated sb_uid entries")
-        if self.data.sb_state.isna().any():
+        empty_state = self.data.sb_state.isna()
+        if empty_state.any():
+            logging.info("data with empty state:")
+            logging.info(self.data[empty_state])
             raise ValueError("empty SB state")
 
     def read_input(self):
@@ -49,7 +52,8 @@ class SBTable:
         logging.info(f"in total, {len(data)} input SBs")
         if self.SB_filter is not None:
             data = data[data.apply(self.SB_filter, axis=1)]
-            logging.info(f"after filtering, {len(data)} input SBs left")
+            logging.info("after filtering with user-provided filter,"
+                         +f" {len(data)} input SBs left")
         self.data = data
 
     def read_12m_input(self):

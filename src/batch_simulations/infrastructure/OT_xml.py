@@ -22,7 +22,8 @@ class OT_XML():
     long_lat_keys = {'longitude':'ra','latitude':'dec'}
     unit_map = {"deg": u.deg,
                 "h": u.hour,
-                "rad": u.rad}
+                "rad": u.rad,
+                "min":u.minute}
 
     def __init__(self,filepath):
         tree = ET.parse(filepath)
@@ -53,7 +54,7 @@ class OT_XML():
             raise ValueError(f"HA limits defined in OT do not make sense ({allowed_HA})")
         return allowed_HA
 
-    def read_RequiresTPAntenna(self):
+    def read_RequiresTPAntennas(self):
         text = self.root.findtext('sbl:SchedulingConstraints/sbl:sbRequiresTPAntennas',
                                   namespaces=self.namespaces)
         if text is None: #not found
@@ -106,8 +107,6 @@ class OT_XML():
     def get_ordered_target_part_ids(self):
         observing_groups = self.root.findall("sbl:ObservingGroup",
                                              namespaces=self.namespaces)
-        # if len(observing_groups) != 2: #Calibrators and Science
-        #     raise ValueError("expected exactly 2 observing groups")
         if len(observing_groups) <= 1:
             #usually there are two observing groups ("Calibrators" and "Science"),
             #but if several tunings are needed (e.g. for clusters of sources),
@@ -182,8 +181,54 @@ class OT_XML():
                 calibrators.append(cal)
         return calibrators
 
+    def get_targets_by_scienc_params_id(self,science_params_part_id):
+        targets = []
+        for target in self.root.findall("sbl:Target", namespaces=self.namespaces):
+            ref = target.find("sbl:ObservingParametersRef", namespaces=self.namespaces)
+            if ref.get("partId") == science_params_part_id:
+                targets.append(target)
+        return targets
+
+    def get_science_targets(self):
+        #to identify science targets, I take all targets that use ScienceParameters
+        #as Observing Parameters
+        science_targets = []
+        science_params = self.find_unique_element("sbl:ScienceParameters")
+        science_params_part_id = science_params.get("entityPartId")
+        targets = self.get_targets_by_scienc_params_id(science_params_part_id)
+        for target in targets:
+            field_source_ref = target.find("sbl:FieldSourceRef",namespaces=self.namespaces)
+            field_source_ID = field_source_ref.get("partId")
+            field_source = self.find_unique_element(
+                               f"sbl:FieldSource[@entityPartId='{field_source_ID}']")
+            sourcename = field_source.findtext("sbl:sourceName",
+                                               namespaces=self.namespaces)
+            logging.info(f"identified science target {sourcename}")
+            coord_element = field_source.find('sbl:sourceCoordinates',
+                                              namespaces=self.namespaces)
+            coordinates = self.read_coordinates(coord_element=coord_element)
+            science_targets.append({"name":sourcename,"coordinates":coordinates})
+        return science_targets
+
     def get_NotetoAoD(self):
         return self.find_unique_element('prj:note').text
+
+    def get_estimated_total_execution_time(self):
+        #this is the total execution time (sum of all executions)
+        element = self.find_unique_element("prj:ObsUnitControl/prj:estimatedExecutionTime")
+        xml_unit = element.attrib['unit']
+        try:
+            unit = self.unit_map[xml_unit]
+        except KeyError:
+            raise RuntimeError(f'unknown unit {xml_unit} for prj:estimatedExecutionTime')
+        return (float(element.text)*unit).to(u.second).value
+
+    def get_nb_of_SB_executions(self):
+        element = self.find_unique_element("sbl:SchedBlockControl/sbl:executionCount")
+        exec_count = float(element.text)
+        if not exec_count.is_integer():
+            raise ValueError("non-integer execution count")
+        return int(exec_count)
 
 
 class BuildSBFromXML:
@@ -192,13 +237,16 @@ class BuildSBFromXML:
     def build(xml_filepath):
         xml = OT_XML(xml_filepath)
         metadata = {"note_to_AoD":xml.get_NotetoAoD()}
-        return  SB(metadata=metadata,
-                   calibrators=xml.read_calibrators_from_observing_groups(),
-                   mode_name=xml.read_modeName(),
-                   nominal_configs=xml.get_nominal_configurations(),
-                   rep_coord=xml.get_representative_coordinates(),
-                   OT_allowed_HA = xml.read_allowed_HA(),
-                   requires_TP=xml.read_RequiresTPAntenna())
+        return SB(calibrators=xml.read_calibrators_from_observing_groups(),
+                  science_targets=xml.get_science_targets(),
+                  mode_name=xml.read_modeName(),
+                  nominal_configs=xml.get_nominal_configurations(),
+                  rep_coord=xml.get_representative_coordinates(),
+                  OT_allowed_HA = xml.read_allowed_HA(),
+                  requires_TP=xml.read_RequiresTPAntennas(),
+                  total_execution_time=xml.get_estimated_total_execution_time(),
+                  number_of_executions=xml.get_nb_of_SB_executions(),
+                  metadata=metadata)
 
 
 if __name__ == "__main__":

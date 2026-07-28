@@ -9,12 +9,14 @@ Created on Thu Mar  5 15:39:13 2026
 from astropy.coordinates import Angle
 from astropy import units as u
 import logging
+import numpy as np
+from scipy import constants
 
 
 class DSAHourAnglePolicy:
 
     @staticmethod
-    def compute(sb):
+    def compute_min_max_HA(sb):
         #Note: this method does not take into account that DSA does not show SBs
         #if science target or hardcoded calibrators are unobservable (below/above)
         #elevation limit
@@ -67,3 +69,36 @@ class DSAHourAnglePolicy:
             raise RuntimeError("invalid DSA HA limits computed "
                                +f"(min: {min_HA_DSA.hour}, max={max_HA_DSA.hour})")
         return {"min":min_HA_DSA,"max":max_HA_DSA}
+
+    @staticmethod
+    def get_elevation_at_ALMA_site(DEC,HA):
+        ALMA_site_latitude = np.radians(-23.029)
+        sin_elevation = np.sin(ALMA_site_latitude)*np.sin(DEC.rad)\
+              + np.cos(ALMA_site_latitude)*np.cos(DEC.rad)*np.cos(HA.rad)
+        return np.arcsin(sin_elevation)
+
+    @staticmethod
+    def outside_elevation_limits(DEC,start_HA,execution_time,target_is_DGC):
+        #I think this allows me to determine (approximately) which SB will not show up in DSA
+        #due to elevation
+        if target_is_DGC:
+            #from Best Practices
+            min_elevation = np.radians(40)
+            max_elevation = np.radians(85)
+        else:
+            min_elevation = np.radians(20)
+            max_elevation = np.radians(88)
+        HA = start_HA
+        end_HA = start_HA + Angle(execution_time/constants.hour*u.hour)
+        HA_step = Angle(0.05*u.hour)
+        while HA <= end_HA:
+            target_elevation = DSAHourAnglePolicy.get_elevation_at_ALMA_site(
+                                               DEC=DEC,HA=HA)
+            if target_elevation < min_elevation:
+                logging.info(f'elevation too low for HA={HA.hour}h, will not show up in DSA')
+                return True
+            if target_elevation > max_elevation:
+                logging.info(f'elevation too high for HA={HA.hour}h, will not show up in DSA')
+                return True
+            HA = HA + HA_step #do not do HA += HA_step! this would modify start_HA
+        return False

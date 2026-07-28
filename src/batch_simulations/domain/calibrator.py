@@ -7,8 +7,6 @@ Created on Wed Jul 24 09:00:06 2024
 """
 
 import logging
-from dataclasses import dataclass
-from typing import Optional
 
 
 CALIBRATOR_TYPES = {
@@ -36,17 +34,22 @@ def classify_calibrator(name):
     return candidate_cal_types[0]
 
 
-@dataclass
 class Calibrator:
-    name: str # this is something like "Phase", or "Polarization calibrator"
-    source_name: str #this can be "query", or something like "J1326-5256"
-    cal_type: str
-    is_hardcoded: bool
-    coordinates: Optional[object]
 
-    def __post_init__(self):
+    def __init__(self,name,source_name,cal_type,is_hardcoded,coordinates=None):
+        self.name = name #this is something like "Phase", or "Polarization calibrator"
+        self.source_name = source_name #this can be "query", or something like "J1326-5256"
+        self.cal_type = cal_type
+        self.is_hardcoded = is_hardcoded
+        self.coordinates = coordinates
+        self.check_consistency()
+
+    def check_consistency(self):
         if self.cal_type not in CALIBRATOR_TYPES:
             raise ValueError(f"Invalid calibrator type '{self.cal_type}'. "
                              +f"Must be one of {CALIBRATOR_TYPES}.")
         if self.is_hardcoded and self.coordinates is None:
             raise ValueError("Hardcoded calibrator must have coordinates.")
+
+    def is_DGC(self):
+        return self.cal_type == "DGC"

@@ -7,11 +7,10 @@ Created on Thu Mar 26 15:13:23 2026
 """
 
 from batch_simulations.infrastructure.OT_xml import BuildSBFromXML
-from batch_simulations.domain.calibrator import Calibrator
 from batch_simulations.domain.dsa_ha_policy import DSAHourAnglePolicy
 import pytest
 from pathlib import Path
-from dataclasses import fields
+from scipy import constants
 
 
 class TestSB:
@@ -102,8 +101,8 @@ class TestSB:
         sb = self.generate_sb("example_polarisation_2023.1.00013.S.xml")
         pol_cal = sb.get_PolCal()
         expected_pol_cal = sb.get_calibrator("Polarization")
-        for field in fields(Calibrator): 
-            assert getattr(pol_cal,field.name) == getattr(expected_pol_cal,field.name)
+        for field,value in vars(pol_cal).items(): 
+            assert value == getattr(expected_pol_cal,field)
         #attempting to get PolCal from non-polarization SB, should fail:
         sb = self.generate_sb("2025.1.01279.S_general_SB.xml")
         with pytest.raises(RuntimeError):
@@ -124,10 +123,20 @@ class TestSB:
 
     def test_DSA_HA_limits(self):
         sb = self.generate_sb("2025.1.01279.S_general_SB.xml")
-        assert sb.get_DSA_HA_limits() == DSAHourAnglePolicy.compute(sb)
+        assert sb.get_DSA_HA_limits() == DSAHourAnglePolicy.compute_min_max_HA(sb)
 
     def test_add_metadata(self):
         sb = self.generate_sb("2025.1.01279.S_general_SB.xml")
         key,value = "test_key",12.34
         sb.add_metadata(key=key,value=value)
         assert sb.metadata[key] == value
+
+    def test_single_execution_time(self):
+        sb = self.generate_sb("single_execution_SB.xml")
+        assert sb.single_execution_time() == 34.793*constants.minute
+        sb = self.generate_sb("eight_executions_SB.xml")
+        assert sb.single_execution_time() == 10.24982222*constants.hour / 8
+        sb = self.generate_sb("Polarisation_1session.xml")
+        assert sb.single_execution_time() == 3.022894444*constants.hour
+        sb = self.generate_sb("Polarisation_several_sessions.xml")
+        assert sb.single_execution_time() == 3.993038889*constants.hour

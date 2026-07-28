@@ -13,6 +13,7 @@ import numpy as np
 from batch_simulations.infrastructure.OT_xml import OT_XML,BuildSBFromXML
 from astropy.coordinates import SkyCoord
 from astropy import units as u
+from scipy import constants
 
 
 xml_folder = Path('tests/xmls')
@@ -49,14 +50,14 @@ def test_read_allowed_HA():
 
 def test_requires_TP():
     xml = get_xml(filename="example_cycle10_7m_2023.1.01099.S.xml")
-    assert xml.read_RequiresTPAntenna()
+    assert xml.read_RequiresTPAntennas()
     xml = get_xml(filename="example_polarisation_2023.1.00013.S.xml")
-    assert not xml.read_RequiresTPAntenna()
+    assert not xml.read_RequiresTPAntennas()
     xml = get_xml(filename="example_VLBI_2022.1.01268.V.xml")
-    assert xml.read_RequiresTPAntenna() is None
+    assert xml.read_RequiresTPAntennas() is None
     xml = get_xml(filename="example_cycle10_7m_2023.1.01099.S_invalid_requiresTP.xml")
     with pytest.raises(RuntimeError):
-        xml.read_RequiresTPAntenna()
+        xml.read_RequiresTPAntennas()
 
 def test_read_coordinates():
     filenames = {"deg":"example_polarisation_2023.1.00013.S.xml",
@@ -214,13 +215,49 @@ def test_read_calibrators():
     bandpass = get_calibrator(calibrators=calibrators, cal_type="Bandpass")
     assert phase.source_name == "query"
     assert bandpass.source_name == "J0120-2701"
-    
+
+def test_get_targets_by_scienc_params_id():
+    xml = get_xml("Polarisation_several_sessions.xml")
+    targets = xml.get_targets_by_scienc_params_id("X828479640")
+    assert len(targets) == 1
+    assert targets[0].get("entityPartId") == "X1398461663"
+    xml = get_xml("multitarget.xml")
+    targets = xml.get_targets_by_scienc_params_id("X868120564")
+    assert len(targets) == 3
+    target_ids = [t.get("entityPartId") for t in targets]
+    assert sorted(target_ids) == sorted(["X994271872","X1565310942","X1634923132"])
+
+def test_get_science_targets():
+    xml = get_xml("Polarisation_several_sessions.xml")
+    science_targets = xml.get_science_targets()
+    assert len(science_targets) == 1
+    assert science_targets[0]["name"] == "beta_pic"
+    xml = get_xml("multitarget.xml")
+    science_targets = xml.get_science_targets()
+    assert len(science_targets) == 3
+    expected_names = sorted(["beta_pic","affenplanet","asterix"])
+    assert expected_names == sorted([s["name"] for s in science_targets])
 
 def test_note_to_aod():
     xml = get_xml("example_cycle10_7m_2023.1.01099.S.xml")
     assert xml.get_NotetoAoD() is None
     xml = get_xml("example_NoteToAoD_2023.1.00578.S.xml")
     assert xml.get_NotetoAoD() == "test Note to AoD"
+
+def test_get_estimated_total_execution_time():
+    filenames = ["single_execution_SB.xml","example_polarisation_2023.1.00013.S.xml"]
+    expected_times = [34.793*constants.minute,3.008891111*constants.hour]
+    for fname,expect_time in zip(filenames,expected_times):
+        xml = get_xml(fname)
+        assert xml.get_estimated_total_execution_time() == expect_time
+
+def test_get_nb_of_SB_executions():
+    filenames = ["single_execution_SB.xml","two_executions_SB.xml",
+                 "eight_executions_SB.xml"]
+    expected_executions = [1,2,8]
+    for fname,expected_exec in zip(filenames,expected_executions):
+        xml = get_xml(fname)
+        assert xml.get_nb_of_SB_executions() == expected_exec
 
 def test_sb_builder():
     filepath = xml_folder / "2025.1.01279.S_general_SB.xml"

@@ -46,7 +46,11 @@ class TestFailReason:
                   "expected_category":"server error"},
                  {"error_message":"bla bla some error",
                   "expected_error_summary":"bla bla some error",
-                  "expected_category":"other"}]
+                  "expected_category":"other"},
+                 {"error_message":"Exception: Specified elevation [-15.212032] is out of range.",
+                  "expected_error_summary":"elevation out of range",
+                  "expected_category":"unobservable"}
+                 ]
         for test in tests:
             fail_reason = FailReason.from_error_message(error_message=test["error_message"])
             assert fail_reason.error_summary == test["expected_error_summary"]

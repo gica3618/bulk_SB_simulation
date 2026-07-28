@@ -15,6 +15,8 @@ from batch_simulations.infrastructure.xml_downloader import XMLDownloader
 from batch_simulations.infrastructure.OT_xml import BuildSBFromXML
 from batch_simulations.application.simulation_runner import SimulationRunner
 from batch_simulations.domain.job_planner import JobPlanner
+from batch_simulations.domain.dsa_ha_policy import DSAHourAnglePolicy
+from batch_simulations.domain.simulation_result import SimulationResult,FailReason
 
 
 def get_unnecessarily_restricted_HAs(has_hardcoded_cals,HAs,results,OT_allowed_HA):
@@ -27,8 +29,10 @@ def get_unnecessarily_restricted_HAs(has_hardcoded_cals,HAs,results,OT_allowed_H
         logging.info("SB has hardcoded calibrators, cannot determine if HAs are "
                      +"unnecessarily restricted")
         return unnecessarily_restricted_HAs
+    tol = 1e-10 #rad; needed because of machine precision rounding errors
     for HA,result in zip(HAs,results):
-        HA_is_excluded = (HA < OT_allowed_HA["min"]) or (HA > OT_allowed_HA["max"])
+        HA_is_excluded = (HA.rad + tol < OT_allowed_HA["min"].rad)\
+                         or (HA.rad-tol > OT_allowed_HA["max"].rad)
         if result.success and HA_is_excluded:
             unnecessarily_restricted_HAs.append(HA)
     if not unnecessarily_restricted_HAs:
@@ -72,8 +76,8 @@ class SingleSBSimulation:
         return sb
 
     @staticmethod
-    def simulate_again_with_fine_HA_step(results,HAs,has_hardcoded_cals,
-                                         OT_allowed_HA):
+    def should_simulate_again_with_fine_HA_step(results,HAs,has_hardcoded_cals,
+                                                OT_allowed_HA):
         if not all(r.success for r in results):
             logging.info("should run again with finer HA step because some "
                          +"simulations failed")
@@ -87,14 +91,63 @@ class SingleSBSimulation:
             return True
         return False
 
+    @staticmethod
+    def get_targets_for_elevation_check(sb):
+        targets_to_check_elevation = [{"name":s["name"],"DEC":s["coordinates"].dec,
+                                       "DGC":False}
+                                      for s in sb.science_targets]
+        for calibrator in sb.calibrators:
+            if calibrator.is_hardcoded:
+                targets_to_check_elevation.append({"name":calibrator.name,
+                                                   "DEC":calibrator.coordinates.dec,
+                                                   "DGC":calibrator.is_DGC()})
+        return targets_to_check_elevation
+
+    @staticmethod
+    def get_targets_beyond_elevation_limits(start_HA,execution_time,targets):
+        targets_beyond_elevation_limits = []
+        for target in targets:
+            if DSAHourAnglePolicy.outside_elevation_limits(
+                         DEC=target["DEC"],start_HA=start_HA,
+                         execution_time=execution_time,target_is_DGC=target["DGC"]):
+                logging.info(target["name"]+" beyond elevation limit")
+                targets_beyond_elevation_limits.append(target["name"])
+        return targets_beyond_elevation_limits
+
     def simulate_HAs(self, planner, array_config, sb, runner_cls=SimulationRunner):
         def run_grid(job_creator):
             HAs,jobs = job_creator(xml_filepath=self.xml_filepath,
                                    array_config=array_config,date=self.date)
             runner = runner_cls()
-            return HAs, runner.run_jobs(jobs)
+            results = []
+            elevation_check_kwargs = {"targets":self.get_targets_for_elevation_check(sb=sb),
+                                      "execution_time":sb.single_execution_time()}
+            for HA,job in zip(HAs,jobs):
+                targets_beyond_elevation_limits = self.get_targets_beyond_elevation_limits(
+                                                    start_HA=HA, **elevation_check_kwargs)
+                if targets_beyond_elevation_limits:
+                    #reason for doing this: OSS checks calibrator availability before
+                    #the elevation of science target. If calibrator is missing for an HA
+                    #where science target is anyway out of elevation limits, this leads
+                    #to false positives: the SB is marked as needing P2G action,
+                    #but actually no action is needed since SB would never show
+                    #up at that HA since science target is not visible
+                    message = ("simulation skipped, elevation outside limits for: "
+                               +"; ".join(targets_beyond_elevation_limits))
+                    fail_reason = FailReason(error_message=message,
+                                             error_summary=message,
+                                             category="unobservable")
+                    result = SimulationResult(executed_command=None,
+                                              output_folder=None,
+                                              xml_filename=Path(self.xml_filepath).name,
+                                              success=False,
+                                              fail_reason=fail_reason)
+                else:
+                    result = runner.run(job)
+                results.append(result)
+            return HAs, results
         HAs, results = run_grid(job_creator=planner.HA_jobs_default_HA_step)
-        should_run_again = self.simulate_again_with_fine_HA_step(
+        should_run_again = self.should_simulate_again_with_fine_HA_step(
                                results=results, HAs=HAs,
                                has_hardcoded_cals=sb.any_calibrator_hardcoded(),
                                OT_allowed_HA=sb.OT_allowed_HA)
@@ -176,8 +229,7 @@ class SingleSBSimulationSummary:
         HA_widths = self.HA_widths()
         runnable_HA_widths = [HA_width for HA,HA_width,result in
                               zip(self.HAs,HA_widths,self.simulation_results)
-                              if (result.success and HA>=self.sb.OT_allowed_HA["min"]
-                                  and HA<=self.sb.OT_allowed_HA["max"])]
+                              if (result.success and self.HA_is_allowed(HA))]
         return sum(runnable_HA_widths)
 
     def analyse_runnable_HA_range(self):
@@ -202,7 +254,9 @@ class SingleSBSimulationSummary:
                               should_be_Waiting=False)
 
     def HA_is_allowed(self,HA):
-        return HA >= self.sb.OT_allowed_HA["min"] and HA <= self.sb.OT_allowed_HA["max"]
+        tol = 1e-10 #rad; necessary because of machine precision rounding errors
+        return (HA.rad + tol >= self.sb.OT_allowed_HA["min"].rad and
+                HA.rad - tol <= self.sb.OT_allowed_HA["max"].rad)
 
     def analyse_simulation_failures(self):
         #logic implemented here:

@@ -38,7 +38,8 @@ class JobPlanner:
         for key in ("min","max"):
             if self.DSA_HA[key] not in HAs:
                 raise RuntimeError(f"{key} HA considered by DSA not in planned HAs")
-        return sorted(HAs)
+        HAs = sorted(HAs)
+        return HAs
 
     def HA_jobs(self, xml_filepath, array_config, date, step):
         jobs = []

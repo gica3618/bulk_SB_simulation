@@ -368,7 +368,6 @@ class TestCampaignResultFormatterSummaryFile:
         assert fail_reasons.count("Asterix") == 2
         assert fail_reasons.count("Miraculix") == 1
 
-
     def test_summarize_fail_reasons(self):
         sb_simulation_summaries = [FakeSimSummary(inspection_reasons=None),
                                    FakeSimSummary(inspection_reasons=["error 1", "error 2"]),
