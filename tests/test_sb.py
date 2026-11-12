@@ -7,10 +7,12 @@ Created on Thu Mar 26 15:13:23 2026
 """
 
 from batch_simulations.infrastructure.OT_xml import BuildSBFromXML
-from batch_simulations.domain.dsa_ha_policy import DSAHourAnglePolicy
+from batch_simulations.domain.dsa_policy import DSAPolicy
 import pytest
 from pathlib import Path
 from scipy import constants
+from astropy.coordinates import Angle
+from astropy import units as u
 
 
 class TestSB:
@@ -121,9 +123,55 @@ class TestSB:
         sb = self.generate_sb("2025.1.01279.S_general_SB.xml")
         assert not sb.any_calibrator_hardcoded()
 
+    def test_any_calibrator_except_PolCal_hardcoded(self):
+        #SB where Pol and some other calibrators are hardcoded
+        sb = self.generate_sb("example_polarisation_2023.1.00013.S.xml")
+        assert sb.get_calibrator("Amplitude").is_hardcoded
+        assert sb.get_calibrator("Polarization").is_hardcoded
+        assert sb.get_calibrator("Bandpass").is_hardcoded
+        assert sb.any_calibrator_except_PolCal_hardcoded()
+        #SB where only PolCal is hardcoded
+        sb = self.generate_sb("example_polarisatoin_2026.1.00697.S.xml")
+        for c in sb.calibrators:
+            if c.cal_type == "Polarization":
+                assert c.is_hardcoded
+            else:
+                assert not c.is_hardcoded
+        assert not sb.any_calibrator_except_PolCal_hardcoded()
+
     def test_DSA_HA_limits(self):
         sb = self.generate_sb("2025.1.01279.S_general_SB.xml")
-        assert sb.get_DSA_HA_limits() == DSAHourAnglePolicy.compute_min_max_HA(sb)
+        assert sb.get_DSA_HA_limits() == DSAPolicy.compute_min_max_HA(sb)
+
+    def test_HA_is_restricted(self):
+        #refactored by ChatGPT
+        sb = self.generate_sb("2025.1.01279.S_general_SB.xml")
+    
+        def check(min_HA, max_HA, restriction_expected):
+            sb.OT_allowed_HA = {"min": min_HA, "max": max_HA}
+            if restriction_expected:
+                assert sb.HA_is_restricted()
+            else:
+                assert not sb.HA_is_restricted()
+    
+        H12 = Angle(12 * u.hour)
+        eps = Angle(0.001 * u.hour)
+
+        check(-H12, H12, False)
+    
+        for max_HA in (Angle(0 * u.hour), H12):
+            check(Angle(-1 * u.hour), max_HA, True)
+    
+        dsa = sb.get_DSA_HA_limits()
+    
+        check(dsa["min"] + eps, H12, True)
+        check(dsa["min"] - eps, H12, False)
+    
+        check(-H12, dsa["max"] - eps, True)
+        check(-H12, dsa["max"] + eps, False)
+    
+        check(dsa["min"] + eps, dsa["max"] - eps, True)
+        check(dsa["min"] - eps, dsa["max"] + eps, False)
 
     def test_add_metadata(self):
         sb = self.generate_sb("2025.1.01279.S_general_SB.xml")

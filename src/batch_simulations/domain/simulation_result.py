@@ -29,6 +29,9 @@ class FailReason:
 
     @classmethod
     def from_error_message(cls,error_message):
+        #TODO need to take into account error messages like following as "unobservable":
+        #Exception: Target BandpassCalTarget on J2253+1608 at 478.382 GHz ref=topo is not observable, 
+        #and does not have a query to fallback on, so aborting execution
         prefix = "Exception: Although 1 source(s) requested, got only 0 for"
         if error_message.startswith(prefix):
             missing_cal = error_message.removeprefix(prefix).removesuffix("query.").strip()
@@ -62,6 +65,13 @@ class FailReason:
             else:
                 error_summary = error_message
             return cls(error_message=error_message,error_summary=error_summary,
+                       category="unobservable")
+
+        if error_message.startswith("Exception: Target") and\
+             error_message.endswith("is not observable, and does not have a query to fallback on, so aborting execution"):
+            unobservable_target = error_message.split()[2]
+            return cls(error_message=error_message,
+                       error_summary=f"{unobservable_target} unobservable",
                        category="unobservable")
 
         if error_message.startswith("Exception: Specified elevation") and\

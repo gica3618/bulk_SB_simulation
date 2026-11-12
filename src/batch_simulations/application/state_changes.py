@@ -9,6 +9,9 @@ Created on Fri Apr 17 18:39:16 2026
 import logging
 from batch_simulations.infrastructure.table_writer import TableWriter
 
+#TODO problematic case is an SB in WaitingForCalibrator that has hardcoded
+#calibrators. those I cannot evaluate with simulations
+#should I put those into WaitingForP2G?
 
 class ProTrackStateChangeWriter:
     #This is a separate class because to write the ProTrack states change files,

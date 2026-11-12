@@ -226,6 +226,21 @@ def test_get_targets_by_scienc_params_id():
     assert len(targets) == 3
     target_ids = [t.get("entityPartId") for t in targets]
     assert sorted(target_ids) == sorted(["X994271872","X1565310942","X1634923132"])
+    xml = get_xml("several_ScienceParameters.xml")
+    targets = xml.get_targets_by_scienc_params_id("X228342155")
+    assert len(targets) == 1
+    assert targets[0].get("entityPartId") == "X103590167"
+    
+def test_get_source_data_from_FieldSource_id():
+    xml = get_xml("Polarisation_several_sessions.xml")
+    source = xml.get_source_data_from_FieldSource_id("X496943102")
+    assert source["name"] == "beta_pic"
+    xml = get_xml("multitarget.xml")
+    source = xml.get_source_data_from_FieldSource_id("X702690292")
+    assert source["name"] == "affenplanet"
+    xml = get_xml("several_ScienceParameters.xml")
+    source = xml.get_source_data_from_FieldSource_id("X1771633520")
+    assert source["name"] == "HOPS-88"
 
 def test_get_science_targets():
     xml = get_xml("Polarisation_several_sessions.xml")
@@ -237,6 +252,14 @@ def test_get_science_targets():
     assert len(science_targets) == 3
     expected_names = sorted(["beta_pic","affenplanet","asterix"])
     assert expected_names == sorted([s["name"] for s in science_targets])
+    xml = get_xml("several_ScienceParameters.xml")
+    science_targets = xml.get_science_targets()
+    assert len(science_targets) == 16
+    expected_names = sorted(["HOPS-96","HOPS-383","HOPS-95","HOPS-91","HOPS-88",
+                             "HOPS-87","HOPS-81","HOPS-78","HOPS-75","HOPS-73",
+                             "HOPS-394","HOPS-370","HOPS-108","HOPS-60","HOPS-56",
+                             "HOPS-153"])
+    assert expected_names == sorted([s["name"] for s in science_targets])
 
 def test_note_to_aod():
     xml = get_xml("example_cycle10_7m_2023.1.01099.S.xml")
@@ -245,8 +268,10 @@ def test_note_to_aod():
     assert xml.get_NotetoAoD() == "test Note to AoD"
 
 def test_get_estimated_total_execution_time():
-    filenames = ["single_execution_SB.xml","example_polarisation_2023.1.00013.S.xml"]
-    expected_times = [34.793*constants.minute,3.008891111*constants.hour]
+    filenames = ["single_execution_SB.xml","example_polarisation_2023.1.00013.S.xml",
+                 "estimated_execution_time_in_days.xml"]
+    expected_times = [34.793*constants.minute,3.008891111*constants.hour,
+                      1.251012176*constants.day]
     for fname,expect_time in zip(filenames,expected_times):
         xml = get_xml(fname)
         assert xml.get_estimated_total_execution_time() == expect_time

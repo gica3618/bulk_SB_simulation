@@ -9,7 +9,7 @@ Created on Thu Mar  5 15:37:27 2026
 from collections import Counter
 import logging
 from scipy import constants
-from batch_simulations.domain.dsa_ha_policy import DSAHourAnglePolicy
+from batch_simulations.domain.dsa_policy import DSAPolicy
 
 
 class SB:
@@ -23,7 +23,6 @@ class SB:
         self.cal_types = [c.cal_type for c in self.calibrators]
         self.mode_name = mode_name
         self.is_Polarisation = "Polarization" in mode_name
-        #TODO exclude VLBI and Solar from simulations?
         self.is_VLBI = 'VLBI' in mode_name
         self.is_Solar = 'Solar' in mode_name
         self.is_B2B = mode_name == 'BandToBand Interferometry'
@@ -75,8 +74,18 @@ class SB:
     def any_calibrator_hardcoded(self):
         return any([c.is_hardcoded for c in self.calibrators])
 
+    def any_calibrator_except_PolCal_hardcoded(self):
+        return any([c.is_hardcoded for c in self.calibrators if
+                    c.cal_type!="Polarization"])
+
     def get_DSA_HA_limits(self):
-        return DSAHourAnglePolicy.compute_min_max_HA(sb=self)
+        return DSAPolicy.compute_min_max_HA(sb=self)
+
+    def HA_is_restricted(self):
+        HA_DSA = self.get_DSA_HA_limits()
+        tol = 1e-10 #rad; needed because of machine precision rounding errors
+        return (self.OT_allowed_HA["min"].rad - tol > HA_DSA["min"].rad
+                  or self.OT_allowed_HA["max"].rad + tol < HA_DSA["max"].rad)
 
     def add_metadata(self,key,value):
         self.metadata[key] = value

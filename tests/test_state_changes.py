@@ -242,12 +242,12 @@ class TestProTrackStateChangeWriter:
             PT_filepath = tmpdirname / Path(f"{base}_ProTrack.csv")
             assert PT_filepath.exists()
             PT = pd.read_csv(PT_filepath,header=None)
-            for index,expected_value in zip((0,1,2,4),
+            for index,expected_value in zip((0,1,2,3),
                                             ("uid:1",state_change["targetState"],
                                              state_change["targetSubstate"],
                                              state_change["comment"])):
                 assert PT.iloc[0,index] == expected_value
-            assert np.isnan(PT.iloc[0,3])
+            assert not PT.isna().any().any()
 
     def test_write_tables_for_ProTrack_state_changes(self):
         #just testing if this runs

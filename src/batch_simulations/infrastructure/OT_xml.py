@@ -23,7 +23,8 @@ class OT_XML():
     unit_map = {"deg": u.deg,
                 "h": u.hour,
                 "rad": u.rad,
-                "min":u.minute}
+                "min":u.minute,
+                "d":u.day}
 
     def __init__(self,filepath):
         tree = ET.parse(filepath)
@@ -182,6 +183,7 @@ class OT_XML():
         return calibrators
 
     def get_targets_by_scienc_params_id(self,science_params_part_id):
+        #find all sbl:Target that use a specific ScienceParamters
         targets = []
         for target in self.root.findall("sbl:Target", namespaces=self.namespaces):
             ref = target.find("sbl:ObservingParametersRef", namespaces=self.namespaces)
@@ -189,25 +191,31 @@ class OT_XML():
                 targets.append(target)
         return targets
 
+    def get_source_data_from_FieldSource_id(self,field_source_ID):
+        field_source = self.find_unique_element(
+                           f"sbl:FieldSource[@entityPartId='{field_source_ID}']")
+        sourcename = field_source.findtext("sbl:sourceName",
+                                           namespaces=self.namespaces)
+        coord_element = field_source.find('sbl:sourceCoordinates',
+                                          namespaces=self.namespaces)
+        coordinates = self.read_coordinates(coord_element=coord_element)
+        return {"name":sourcename,"coordinates":coordinates}
+
     def get_science_targets(self):
         #to identify science targets, I take all targets that use ScienceParameters
         #as Observing Parameters
         science_targets = []
-        science_params = self.find_unique_element("sbl:ScienceParameters")
-        science_params_part_id = science_params.get("entityPartId")
-        targets = self.get_targets_by_scienc_params_id(science_params_part_id)
-        for target in targets:
-            field_source_ref = target.find("sbl:FieldSourceRef",namespaces=self.namespaces)
-            field_source_ID = field_source_ref.get("partId")
-            field_source = self.find_unique_element(
-                               f"sbl:FieldSource[@entityPartId='{field_source_ID}']")
-            sourcename = field_source.findtext("sbl:sourceName",
-                                               namespaces=self.namespaces)
-            logging.info(f"identified science target {sourcename}")
-            coord_element = field_source.find('sbl:sourceCoordinates',
-                                              namespaces=self.namespaces)
-            coordinates = self.read_coordinates(coord_element=coord_element)
-            science_targets.append({"name":sourcename,"coordinates":coordinates})
+        for science_params in self.root.findall("sbl:ScienceParameters",
+                                                namespaces=self.namespaces):
+            science_params_part_id = science_params.get("entityPartId")
+            targets = self.get_targets_by_scienc_params_id(science_params_part_id)
+            for target in targets:
+                field_source_ref = target.find("sbl:FieldSourceRef",namespaces=self.namespaces)
+                field_source_ID = field_source_ref.get("partId")
+                science_target = self.get_source_data_from_FieldSource_id(
+                                                    field_source_ID=field_source_ID)
+                science_targets.append(science_target)
+                logging.info(f"identified science target {science_target['name']}")
         return science_targets
 
     def get_NotetoAoD(self):

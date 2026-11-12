@@ -61,6 +61,7 @@ class TestCampaignResultFormatter:
                                           date=datetime.date(1254,4,8),
                                           HAs=HAs,
                                           analysis_result=AnalysisResult(inspection_reasons=["simulation failure"],
+                                                                         new_HA_limits=None,
                                                                          should_be_Waiting=True),
                                           simulation_results=fake_simulation_results,
                                           unexpected_error=None)
@@ -167,9 +168,11 @@ class TestCampaignResultFormatter:
         for inspection_reasons in (["simulation failure"],[]):
             fake_formatter = FakeFormatter()
             row = {}
+            analysis_result = AnalysisResult(inspection_reasons=inspection_reasons,
+                                             new_HA_limits=None,
+                                             should_be_Waiting=True)
             sb_sim_summary = FakeSBSummary(unexpected_error=None,
-                                           analysis_result = AnalysisResult(inspection_reasons=inspection_reasons,
-                                                                            should_be_Waiting=True))
+                                           analysis_result = analysis_result)
             fake_formatter.add_simulation_info(row=row,sb_sim_summary=sb_sim_summary)
             assert len(row) == 5
             assert row["simulated_config"] == FakeSBSummary.config
@@ -185,9 +188,11 @@ class TestCampaignResultFormatter:
         #case with unexpected error:
         unexpected_error = {"error_message":"kabumm","full_traceback":"the full traceback"}
         row = {}
+        analysis_result = AnalysisResult(inspection_reasons=["unexpected error"],
+                                         new_HA_limits=None,
+                                         should_be_Waiting=True)
         sb_sim_summary = FakeSBSummary(unexpected_error=unexpected_error,
-                                       analysis_result = AnalysisResult(inspection_reasons=["unexpected error"],
-                                                                        should_be_Waiting=True))
+                                       analysis_result = analysis_result)
         fake_formatter.add_simulation_info(row=row,sb_sim_summary=sb_sim_summary)
         assert len(row) == 4
         assert row["simulations"] == unexpected_error["error_message"]
@@ -213,12 +218,14 @@ class TestCampaignResultFormatter:
                                   sb_table_row=sb_table.data.iloc[0])
         assert len(row) > 0
         unexpected_error = {"error_message":"whoops","full_traceback":"the details"}
+        analysis_result = AnalysisResult(inspection_reasons="unexpected error",
+                                         new_HA_limits=None,
+                                         should_be_Waiting=True)
         fake_sb_sim_summary_failed = SimpleNamespace(
                                         sb=None,config="c43-6",
                                         date=datetime.date(1254,4,8),HAs=None,
                                         simulation_results=None,
-                                        analysis_result=AnalysisResult(inspection_reasons="unexpected error",
-                                                                       should_be_Waiting=True),
+                                        analysis_result=analysis_result,
                                         unexpected_error=unexpected_error)
         row = formatter.build_row(sb_sim_summary=fake_sb_sim_summary_failed,
                                   sb_table_row=sb_table.data.iloc[0])

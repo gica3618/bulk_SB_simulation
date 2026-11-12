@@ -68,10 +68,9 @@ class TestTableWriter:
             filepath = tmpdirname / filename
             assert filepath.exists()
             written = pd.read_csv(filepath,header=None)
-            assert len(written.columns) == 5
+            assert len(written.columns) == 4
             #I set one selection to False, so I know the expected length:
             assert len(written) == len(table)-1
             assert all(written.iloc[:,1]==targetState)
             assert all(written.iloc[:,2]==targetSubstate)
-            assert all(written.iloc[:,3].isna()) #timestamp
-            assert all(written.iloc[:,4]==comment)
+            assert all(written.iloc[:,3]==comment)

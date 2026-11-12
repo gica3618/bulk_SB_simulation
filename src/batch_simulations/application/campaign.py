@@ -20,7 +20,6 @@ from itertools import repeat
 
 
 #TODO allow different dates for 12m and 7m
-#TODO parallelise using ThreadPoolExecutor
 
 
 class SimulationCampaign:
@@ -33,7 +32,7 @@ class SimulationCampaign:
     def run_single_sb(self,i,row, single_sb_sim_cls):
         #IMPORTANT: since this is the method that is parallelised, it should not
         #write to self! if several threads write to self simultaneously, bad things
-        #may happen. On the other hand, it is allowed to read self
+        #may happen. On the other hand, it is allowed to read from self
         logging.info(f"Running SB {i}/{len(self.sb_table.data)}: {row.sbname} {row.code}")
         sim = single_sb_sim_cls(project_code=row.code,sb_name=row.sbname,
                                 date=self.date,
@@ -129,10 +128,7 @@ class CampaignResultFormatter:
         HA_DSA = sb.get_DSA_HA_limits()
         for lim in ("min", "max"):
             row[f"{lim}_HA_DSA"] = HA_DSA[lim].hour
-        tol = 1e-10 #rad; needed because of machine precision rounding errors
-        row["HA_is_restricted"] = (
-            sb.OT_allowed_HA["min"].rad - tol > HA_DSA["min"].rad
-                  or sb.OT_allowed_HA["max"].rad + tol < HA_DSA["max"].rad)
+        row["HA_is_restricted"] = sb.HA_is_restricted()
 
     def add_simulation_info(self, row, sb_sim_summary):
         if sb_sim_summary.unexpected_error is None:

@@ -13,7 +13,7 @@ import numpy as np
 from scipy import constants
 
 
-class DSAHourAnglePolicy:
+class DSAPolicy:
 
     @staticmethod
     def compute_min_max_HA(sb):
@@ -78,27 +78,72 @@ class DSAHourAnglePolicy:
         return np.arcsin(sin_elevation)
 
     @staticmethod
-    def outside_elevation_limits(DEC,start_HA,execution_time,target_is_DGC):
-        #I think this allows me to determine (approximately) which SB will not show up in DSA
-        #due to elevation
-        if target_is_DGC:
+    def elevation_ok(DEC,start_HA,is_DGC):
+        if is_DGC:
             #from Best Practices
             min_elevation = np.radians(40)
             max_elevation = np.radians(85)
         else:
             min_elevation = np.radians(20)
             max_elevation = np.radians(88)
-        HA = start_HA
-        end_HA = start_HA + Angle(execution_time/constants.hour*u.hour)
-        HA_step = Angle(0.05*u.hour)
-        while HA <= end_HA:
-            target_elevation = DSAHourAnglePolicy.get_elevation_at_ALMA_site(
-                                               DEC=DEC,HA=HA)
-            if target_elevation < min_elevation:
-                logging.info(f'elevation too low for HA={HA.hour}h, will not show up in DSA')
-                return True
-            if target_elevation > max_elevation:
-                logging.info(f'elevation too high for HA={HA.hour}h, will not show up in DSA')
-                return True
-            HA = HA + HA_step #do not do HA += HA_step! this would modify start_HA
-        return False
+        raise NotImplementedError()
+        #the following simple method is too inaccurate; it leads to too many
+        #skipped simulations
+        #TODO need a better method...
+        # HA = start_HA
+        # end_HA = start_HA + Angle(execution_time/constants.hour*u.hour)
+        # HA_step = Angle(0.05*u.hour)
+        # while HA <= end_HA:
+        #     target_elevation = DSAPolicy.get_elevation_at_ALMA_site(
+        #                                        DEC=DEC,HA=HA)
+        #     if target_elevation < min_elevation:
+        #         logging.info(f'elevation too low for HA={HA.hour}h, will not show up in DSA')
+        #         return False
+        #     if target_elevation > max_elevation:
+        #         logging.info(f'elevation too high for HA={HA.hour}h, will not show up in DSA')
+        #         return False
+        #     HA = HA + HA_step #do not do HA += HA_step! this would modify start_HA
+        # return True
+
+    @staticmethod
+    def targets_for_elevation_check(sb):
+        targets_to_check_elevation = [{"name":s["name"],"DEC":s["coordinates"].dec,
+                                       "DGC":False}
+                                      for s in sb.science_targets]
+        for calibrator in sb.calibrators:
+            if calibrator.is_hardcoded:
+                targets_to_check_elevation.append({"name":calibrator.name,
+                                                   "DEC":calibrator.coordinates.dec,
+                                                   "DGC":calibrator.is_DGC()})
+        return targets_to_check_elevation
+
+    def targets_beyond_elevation_limits(self,start_HA,sb):
+        #TODO needs a test
+        targets_to_check = self.targets_for_elevation_check(sb=sb)
+        not_ok_targets = []
+        for target in targets_to_check:
+            if not self.elevation_ok(DEC=target["DEC"],start_HA=start_HA,
+                                     target_is_DGC=target["DGC"]):
+                logging.info(target["name"]+" beyond elevation limit")
+                not_ok_targets.append(target["name"])
+        return not_ok_targets
+
+    @staticmethod
+    def close_to_sun(sb):
+        #TODO implement, write a test
+        raise NotImplementedError()
+
+    def reasons_for_not_showing_up(self,sb,start_HA):
+        #TODO implement, write a test
+        raise NotImplementedError()
+        """
+        reasons = []
+        targets_not_ok = self.targets_beyond_elevation_limits(
+                                            start_HA=start_HA, sb=sb)
+        if targets_not_ok:
+            reasons.append("targets beyond elevation limit: "
+                           +", ".join(targets_not_ok))
+        if self.close_to_sun(sb=sb):
+            reasons.append("Sun avoidance")
+        return reasons
+        """

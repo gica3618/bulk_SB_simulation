@@ -21,19 +21,18 @@ class TestJobPlanner:
     array_config  = "c43-6"
     date = datetime.date(year=1912,month=10,day=5)
 
-    @staticmethod
-    def construct_sb(filename):
-        filepath = Path('tests/xmls') / filename
-        return BuildSBFromXML.build(xml_filepath=filepath)
+    # @staticmethod
+    # def construct_sb(filename):
+    #     filepath = Path('tests/xmls') / filename
+    #     return BuildSBFromXML.build(xml_filepath=filepath)
 
     def generate_general_planner(self):
-        sb = self.construct_sb("2025.1.01279.S_general_SB.xml")
-        return JobPlanner(sb=sb, default_HA_step=Angle(1*u.hour),
-                          fine_HA_step=Angle(0.25*u.hour))
+        DSA_HA_limits = {"min":Angle(-4*u.hour),"max":Angle(3*u.hour)}
+        return JobPlanner(DSA_HA_limits=DSA_HA_limits)
 
     def test_compute_HAs_general(self):
         job_planner = self.generate_general_planner()
-        expected_HA_limits = job_planner.sb.get_DSA_HA_limits()
+        expected_HA_limits = job_planner.DSA_HA_limits
         #test step where both DSAmin and DSAmax are exactly included:
         for step in (Angle(1*u.hour),Angle(0.25*u.hour)):
             sim_HA = job_planner.compute_HAs(step=step)
@@ -50,8 +49,8 @@ class TestJobPlanner:
 
     def test_compute_HAs_explicitly(self):
         job_planner = self.generate_general_planner()
-        job_planner.DSA_HA["min"] = Angle(-3.2*u.hour)
-        job_planner.DSA_HA["max"] = Angle(3*u.hour)
+        job_planner.DSA_HA_limits["min"] = Angle(-3.2*u.hour)
+        job_planner.DSA_HA_limits["max"] = Angle(3*u.hour)
         sim_HA = job_planner.compute_HAs(step=Angle(0.5*u.hour))
         expected_HAs = np.arange(-3,3.1,0.5)
         expected_HAs = np.insert(expected_HAs, 0, -3.2) 
@@ -64,7 +63,7 @@ class TestJobPlanner:
     
     def test_noninteger_max_HA_DSA(self):
         job_planner = self.generate_general_planner()
-        job_planner.DSA_HA["max"] = Angle(2.1*u.hour)
+        job_planner.DSA_HA_limits["max"] = Angle(2.1*u.hour)
         with pytest.raises(RuntimeError):
             job_planner.compute_HAs(step=Angle(1*u.hour))
 
@@ -85,16 +84,16 @@ class TestJobPlanner:
                                         date=self.date, step=step)
         self.verify_jobs(jobs=jobs,HAs=HAs,expected_step=step)
 
-    def test_HA_jobs_default_step(self):
-        job_planner = self.generate_general_planner()
-        HAs, jobs = job_planner.HA_jobs_default_HA_step(
-                          xml_filepath=self.xml_filepath,
-                          array_config=self.array_config,date=self.date)
-        self.verify_jobs(jobs=jobs,HAs=HAs,expected_step=job_planner.default_HA_step)
+    # def test_HA_jobs_default_step(self):
+    #     job_planner = self.generate_general_planner()
+    #     HAs, jobs = job_planner.HA_jobs_default_HA_step(
+    #                       xml_filepath=self.xml_filepath,
+    #                       array_config=self.array_config,date=self.date)
+    #     self.verify_jobs(jobs=jobs,HAs=HAs,expected_step=job_planner.default_HA_step)
 
-    def test_HA_jobs_fine_step(self):
-        job_planner = self.generate_general_planner()
-        HAs, jobs = job_planner.HA_jobs_fine_HA_step(
-                          xml_filepath=self.xml_filepath,
-                          array_config=self.array_config,date=self.date)
-        self.verify_jobs(jobs=jobs,HAs=HAs,expected_step=job_planner.fine_HA_step)
+    # def test_HA_jobs_fine_step(self):
+    #     job_planner = self.generate_general_planner()
+    #     HAs, jobs = job_planner.HA_jobs_fine_HA_step(
+    #                       xml_filepath=self.xml_filepath,
+    #                       array_config=self.array_config,date=self.date)
+    #     self.verify_jobs(jobs=jobs,HAs=HAs,expected_step=job_planner.fine_HA_step)

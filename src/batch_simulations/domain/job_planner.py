@@ -11,32 +11,29 @@ from batch_simulations.domain.simulation_job import SimulationJob
 
 class JobPlanner:
 
-    def __init__(self, sb, default_HA_step, fine_HA_step):
-        self.sb = sb
-        self.default_HA_step = default_HA_step
-        self.fine_HA_step = fine_HA_step
-        self.DSA_HA = sb.get_DSA_HA_limits()
+    def __init__(self, DSA_HA_limits):
+        self.DSA_HA_limits = DSA_HA_limits
 
     def compute_HAs(self, step):
         if step.hour <= 0:
             raise ValueError(f"invalid HA step: {step.hour} H")
         #min_HA considered by DSA might be affected by PolCal, but max_HA is
         #always an integer, so I start with max_HA
-        if not self.DSA_HA["max"].hour.is_integer():
+        if not self.DSA_HA_limits["max"].hour.is_integer():
             raise RuntimeError("expected max DSA HA to be an integer, but it is"
-                               +f"{self.DSA_HA['max'].hour}h")
+                               +f"{self.DSA_HA_limits['max'].hour}h")
         HAs = []
-        HA = self.DSA_HA["max"].copy() #safer to make a copy here, to avoid modifying self.DSA_HA
-        while HA >= self.DSA_HA["min"]:
+        HA = self.DSA_HA_limits["max"].copy() #safer to make a copy here, to avoid modifying self.DSA_HA
+        while HA >= self.DSA_HA_limits["min"]:
             HAs.append(HA)
             #don't do "HA -= step" here, as this leads to modification of all
             #HAs already in the list:
             HA = HA - step
         #make sure min HA considered by DSA is included
-        if self.DSA_HA["min"] not in HAs:
-            HAs.append(self.DSA_HA["min"])
+        if self.DSA_HA_limits["min"] not in HAs:
+            HAs.append(self.DSA_HA_limits["min"])
         for key in ("min","max"):
-            if self.DSA_HA[key] not in HAs:
+            if self.DSA_HA_limits[key] not in HAs:
                 raise RuntimeError(f"{key} HA considered by DSA not in planned HAs")
         HAs = sorted(HAs)
         return HAs
@@ -50,10 +47,10 @@ class JobPlanner:
             jobs.append(job)
         return HAs,jobs
 
-    def HA_jobs_default_HA_step(self,xml_filepath,array_config,date):
-        return self.HA_jobs(xml_filepath=xml_filepath, array_config=array_config,
-                            date=date, step=self.default_HA_step)
+    # def HA_jobs_default_HA_step(self,xml_filepath,array_config,date):
+    #     return self.HA_jobs(xml_filepath=xml_filepath, array_config=array_config,
+    #                         date=date, step=self.default_HA_step)
 
-    def HA_jobs_fine_HA_step(self,xml_filepath,array_config,date):
-        return self.HA_jobs(xml_filepath=xml_filepath, array_config=array_config,
-                            date=date, step=self.fine_HA_step)
+    # def HA_jobs_fine_HA_step(self,xml_filepath,array_config,date):
+    #     return self.HA_jobs(xml_filepath=xml_filepath, array_config=array_config,
+    #                         date=date, step=self.fine_HA_step)

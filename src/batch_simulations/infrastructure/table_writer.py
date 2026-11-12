@@ -106,7 +106,6 @@ class TableWriter:
         out = pd.DataFrame({"sb_uid":table[selection]["sb_uid"]})
         out["targetState"] = targetState
         out["targetSubstate"] = targetSubstate
-        out["timestamp"] = ''
         out["comment"] = comment
         filepath = Path(output_dir) / filename
         out.to_csv(filepath,index=False,header=False)
