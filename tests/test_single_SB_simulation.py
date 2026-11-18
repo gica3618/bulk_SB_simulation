@@ -14,9 +14,6 @@ from astropy.coordinates import Angle,SkyCoord
 from astropy import units as u
 from batch_simulations.application.single_SB_simulation import SingleSBSimulation,\
         AnalysisResult, SingleSBSimulationAnalysis
-from batch_simulations.domain.simulation_result import FailReason
-from batch_simulations.domain.dsa_policy import DSAPolicy
-from batch_simulations.infrastructure.OT_xml import BuildSBFromXML
 from batch_simulations.domain.sb import SB
 from dataclasses import dataclass
 
@@ -283,7 +280,9 @@ class TestSingleSBSimulationAnalysis:
                                DSA_HA_limits={"min":Angle(-4*u.hour),"max":Angle(3*u.hour)}):
         if unexpected_error is not None:
             return SingleSBSimulationAnalysis(sb=None,HAs=None,simulation_results=None,
-                                              unexpected_error=unexpected_error)
+                                              unexpected_error=unexpected_error,
+                                              simulated_date=datetime.date(1247,4,4),
+                                              simulated_config="c43-8")
         if len(result_codes) != len(HAs):
             raise ValueError
 
@@ -314,7 +313,8 @@ class TestSingleSBSimulationAnalysis:
                 simulation_results.append(SimpleNamespace(success=False,fail_reason=fail_reason))
 
         return SingleSBSimulationAnalysis(sb=sb,HAs=HAs,simulation_results=simulation_results,
-                                          unexpected_error=unexpected_error)
+                                          unexpected_error=unexpected_error,
+                                          simulated_date=None,simulated_config=None)
 
     def test_analyse_with_unexpected_error(self):
         unexpected_error = {"error_message":"kabumm",

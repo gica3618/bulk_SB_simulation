@@ -18,8 +18,8 @@ class TestTableWriter:
 
     def test_sort_columns(self):
         writer = TableWriter()
-        input_columns = ["sb_uid","code","min_HA_OT","Phase"]
-        expected_output_columns = ["code","sb_uid","Phase","min_HA_OT"]
+        input_columns = ["sb_uid","code","HA_min","query_calibrators"]
+        expected_output_columns = ["code","sb_uid","query_calibrators","HA_min"]
         output_columns = writer.sort_columns(input_columns)
         assert output_columns == expected_output_columns
 

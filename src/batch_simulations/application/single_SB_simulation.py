@@ -141,7 +141,9 @@ class SingleSBSimulation:
             HAs, results = self.simulate_HAs(array_config=array_config,sb=sb)
             return SingleSBSimulationAnalysis(sb=sb,HAs=HAs,
                                              simulation_results=results,
-                                             unexpected_error=None)
+                                             unexpected_error=None,
+                                             simulated_date=self.date,
+                                             simulated_config=array_config)
         except Exception as e:
             logging.exception("Unexpected error while simulating"
                               +f" {self.sb_name} ({self.project_code})\n"
@@ -152,7 +154,9 @@ class SingleSBSimulation:
                                 "full_traceback":full_trace}
             return SingleSBSimulationAnalysis(sb=None,HAs=None,
                                              simulation_results=None,
-                                             unexpected_error=unexpected_error)
+                                             unexpected_error=unexpected_error,
+                                             simulated_date=None,
+                                             simulated_config=None)
 
     def __del__(self):
         self.xml_filepath.unlink(missing_ok=True)
@@ -180,11 +184,14 @@ class SingleSBSimulationAnalysis:
     max_removable_successful_HA_amount = Angle(1*u.hour)
     min_remaining_HA_amount_when_excluding_HAs = Angle(2*u.hour)
 
-    def __init__(self,sb,HAs,simulation_results,unexpected_error):
+    def __init__(self,sb,HAs,simulation_results,unexpected_error,simulated_date,
+                 simulated_config):
         self.sb = sb
         self.HAs = HAs
         self.simulation_results = simulation_results
         self.unexpected_error = unexpected_error
+        self.simulated_date = simulated_date
+        self.simulated_config = simulated_config
 
     def analyse(self):
         #I need to consider different categories of errors
@@ -266,6 +273,7 @@ class SingleSBSimulationAnalysis:
     def analyse_missing_calibrator_hardcoded(self):
         #I do not attempt to change HA restrictions of SBs with
         #hardcoded calibrators
+        #TODO should I add inspection reason in any case?
         if self.missing_calibrator_at_allowed_HA():
             self.analysis_result.inspection_reasons.add("missing calibrator")
             self.analysis_result.suggest_state("Waiting")

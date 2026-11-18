@@ -19,9 +19,6 @@ from concurrent.futures import ThreadPoolExecutor
 from itertools import repeat
 
 
-#TODO allow different dates for 12m and 7m
-
-
 class SimulationCampaign:
 
     def __init__(self, name, sb_table, date):
@@ -29,31 +26,24 @@ class SimulationCampaign:
         self.sb_table = sb_table
         self.date = date
 
-    def run_single_sb(self,i,row, single_sb_sim_cls):
+    def run_single_sb(self,i,row,single_sb_sim_cls):
         #IMPORTANT: since this is the method that is parallelised, it should not
         #write to self! if several threads write to self simultaneously, bad things
-        #may happen. On the other hand, it is allowed to read from self
+        #may happen. On the other hand, it is allowed to *read* from self
         logging.info(f"Running SB {i}/{len(self.sb_table.data)}: {row.sbname} {row.code}")
         sim = single_sb_sim_cls(project_code=row.code,sb_name=row.sbname,
                                 date=self.date,
                                 array_config_12m=self.sb_table.array_config_12m)
-        summary = sim.simulate()
-        summary.analyse()
-        return summary
+        analysis = sim.simulate()
+        analysis.analyse()
+        return analysis
 
     def run(self,single_sb_sim_cls=SingleSBSimulation):
-        self.sb_simulation_summaries = []
         start = datetime.datetime.now()
         map_args = (self.run_single_sb, range(1,len(self.sb_table.data)+1),
                     self.sb_table.data.itertuples(),repeat(single_sb_sim_cls))
         with ThreadPoolExecutor() as executor:
-            self.sb_simulation_summaries = list(executor.map(*map_args))
-        # for i, row in enumerate(self.sb_table.data.itertuples(), start=1):
-        #     sim_summary = self.run_single_sb(
-        #                          row=row, date=self.date,
-        #                          array_config_12m=self.sb_table.array_config_12m,
-        #                          single_sb_sim_cls=single_sb_sim_cls)
-        #     self.sb_simulation_summaries.append(sim_summary)
+            self.sb_simulation_analyses = list(executor.map(*map_args))
         end = datetime.datetime.now()
         self.run_time = end-start
 
@@ -71,28 +61,29 @@ class CampaignResultFormatter:
         self.check_consistency()
 
     def check_consistency(self):
-        if not len(self.campaign.sb_table.data) == len(self.campaign.sb_simulation_summaries):
+        if len(self.campaign.sb_table.data) != len(self.campaign.sb_simulation_analyses):
             raise RuntimeError
 
     def create_master_dataframe(self):
         logging.info("going to create master dataframe")
         rows = []
-        for sb_sim_summary, sb_table_row in zip(self.campaign.sb_simulation_summaries,
+        for sb_sim_analysis, sb_table_row in zip(self.campaign.sb_simulation_analyses,
                                                 self.campaign.sb_table.data.itertuples()):
-            row = self.build_row(sb_sim_summary=sb_sim_summary, sb_table_row=sb_table_row)
+            row = self.build_row(sb_sim_analysis=sb_sim_analysis,
+                                 sb_table_row=sb_table_row)
             rows.append(row)
         self.master_table = pd.DataFrame(rows)
         self.master_table.sort_values(by='code',inplace=True)
 
-    def build_row(self, sb_sim_summary, sb_table_row):
-        sb = sb_sim_summary.sb
+    def build_row(self, sb_sim_analysis, sb_table_row):
+        sb = sb_sim_analysis.sb
         row = {}
         self.add_general_info(row=row, sb_table_row=sb_table_row)
-        self.add_simulation_info(row=row, sb_sim_summary=sb_sim_summary)
-        if sb_sim_summary.sb is not None:
+        self.add_simulation_info(row=row, sb_sim_analysis=sb_sim_analysis)
+        if sb_sim_analysis.sb is not None:
             self.add_note_to_aod(row=row, sb=sb)
+            self.add_query_calibrators(row=row,sb=sb)
             self.add_hardcoded_calibrators(row=row, sb=sb)
-            self.add_individual_calibrators(row=row,sb=sb)
             self.add_HA_limits(row=row, sb=sb)
         return row
 
@@ -105,46 +96,52 @@ class CampaignResultFormatter:
         row["note_to_AoD"] = sb.metadata["note_to_AoD"]
 
     @staticmethod
+    def add_query_calibrators(row,sb):
+        query_calibrators = [f"{c.cal_type}" for c in sb.calibrators
+                             if not c.is_hardcoded]
+        if query_calibrators:
+            row["query_calibrators"] = ", ".join(query_calibrators)
+        else:
+            row["query_calibrators"] = pd.NA
+
+    @staticmethod
     def add_hardcoded_calibrators(row, sb):
-        hardcoded_calibrators = [c.cal_type for c in sb.calibrators if
-                                 c.is_hardcoded]
+        hardcoded_calibrators = [f"{c.cal_type} ({c.source_name})" for c in
+                                 sb.calibrators if c.is_hardcoded]
         if hardcoded_calibrators:
             row["hardcoded_calibrators"] = ", ".join(hardcoded_calibrators)
         else:
             row["hardcoded_calibrators"] = pd.NA
 
     @staticmethod
-    def add_individual_calibrators(row,sb):
-        for cal_type in CALIBRATOR_TYPES:
-            if cal_type in sb.cal_types:
-                row[cal_type] = sb.get_calibrator(cal_type).source_name
-            else:
-                row[cal_type] = pd.NA
-
-    @staticmethod
-    def add_HA_limits(row, sb):
+    def add_HA_limits(row, sb_sim_analysis):
+        HA_DSA = sb_sim_analysis.sb.get_DSA_HA_limits()
         for lim in ("min", "max"):
-            row[f"{lim}_HA_OT"] = sb.OT_allowed_HA[lim].hour
-        HA_DSA = sb.get_DSA_HA_limits()
-        for lim in ("min", "max"):
-            row[f"{lim}_HA_DSA"] = HA_DSA[lim].hour
-        row["HA_is_restricted"] = sb.HA_is_restricted()
+            row[f"HA_{lim}"] = sb_sim_analysis.sb.OT_allowed_HA[lim].hour
+            row[f"HA_{lim}_DSA"] = HA_DSA[lim].hour
+            if sb_sim_analysis.analysis_result.recommended_HA_limits is not None:
+                row[f"HA_{lim}_recommended"]\
+                      = sb_sim_analysis.analysis_result.recommended_HA_limits[lim].hour
+        row["HA_is_restricted"] = sb_sim_analysis.sb.HA_is_restricted()
 
-    def add_simulation_info(self, row, sb_sim_summary):
-        if sb_sim_summary.unexpected_error is None:
-            row["simulated_config"] = sb_sim_summary.config
-            row["simulated_date"] = str(sb_sim_summary.date)
+    def add_simulation_info(self, row, sb_sim_analysis):
+        if sb_sim_analysis.unexpected_error is None:
+            row["simulated_config"] = sb_sim_analysis.simulated_config
+            row["simulated_date"] = sb_sim_analysis.simulated_date
             row["simulations"] = self.build_per_HA_summary_string(
-                                    simulation_results=sb_sim_summary.simulation_results,
-                                    HAs=sb_sim_summary.HAs)
+                                    simulation_results=sb_sim_analysis.simulation_results,
+                                    HAs=sb_sim_analysis.HAs)
         else:
-            unexpected_error = sb_sim_summary.unexpected_error
+            unexpected_error = sb_sim_analysis.unexpected_error
             row["simulations"] = unexpected_error["error_message"]
             row["traceback_of_unexpected_error"] = unexpected_error["full_traceback"]
-        inspection_reasons = sb_sim_summary.analysis_result.inspection_reasons
+        inspection_reasons = sb_sim_analysis.analysis_result.inspection_reasons
         row["inspection_reasons"] = ("; ".join(inspection_reasons) if inspection_reasons
                                      else pd.NA)
-        row["should_be_Waiting"] = sb_sim_summary.analysis_result.should_be_Waiting
+        if sb_sim_analysis.analysis_result.recommended_state is None:
+            row["recommended_state"] = pd.NA
+        else:
+            row["recommended_state"] = sb_sim_analysis.analysis_result.recommended_state
 
     @staticmethod
     def build_per_HA_summary_string(simulation_results, HAs):
@@ -182,7 +179,7 @@ class CampaignResultFormatter:
 
     def summarize_unexpected_errors(self):
         unexpected_err = [sim_summary.unexpected_error for sim_summary in
-                          self.campaign.sb_simulation_summaries]
+                          self.campaign.sb_simulation_analyses]
         unexpected_err = [e for e in unexpected_err if e is not None]
         n_unexpected_err = len(unexpected_err)
         return f"{n_unexpected_err} SBs yielded an unexpected error\n"
@@ -201,25 +198,20 @@ class CampaignResultFormatter:
 
     def summarize_inspection_reasons(self):
         inspection_reasons = []
-        for sim_summary in self.campaign.sb_simulation_summaries:
-            inspection_reasons += sim_summary.analysis_result.inspection_reasons
-        #for unnecessarily restricted HA, the reason is something like
-        #"unnecessarily restricted HA(s): -3.5, 2, 2.5"
-        res_HA = "unnecessarily restricted HA(s)"
-        inspection_reasons = [res_HA if res_HA in reason else reason for reason
-                              in inspection_reasons]
+        for sim_analysis in self.campaign.sb_simulation_analyses:
+            inspection_reasons += sim_analysis.analysis_result.inspection_reasons
         return "inspection reasons:\n" + self.get_count_lines(inspection_reasons)
 
     @staticmethod
-    def get_fail_reasons_per_SB(sb_simulation_summaries):
+    def get_fail_reasons_per_SB(sb_simulation_analyses):
         fail_reasons = []
-        for sim_summary in sb_simulation_summaries:
-            if sim_summary.simulation_results is None:
-                fail_reasons.append(sim_summary.unexpected_error["error_message"])
+        for sim_analysis in sb_simulation_analyses:
+            if sim_analysis.simulation_results is None:
+                fail_reasons.append(sim_analysis.unexpected_error["error_message"])
             else:
                 #no unexpected error; iterate over HAs:
                 sb_fail_reasons = []
-                for result in sim_summary.simulation_results:
+                for result in sim_analysis.simulation_results:
                     if not result.success:
                         if result.fail_reason.category == "missing calibrator":
                             sb_fail_reasons.append(result.fail_reason.error_summary)
@@ -229,15 +221,15 @@ class CampaignResultFormatter:
         return fail_reasons
 
     def summarize_fail_reasons(self):
-        sim_summaries = {"all SBs": self.campaign.sb_simulation_summaries}
-        need_inspection_summaries = [summary for summary in
-                                     self.campaign.sb_simulation_summaries
-                                     if summary.analysis_result.inspection_reasons]
-        sim_summaries["SBs needing inspection"] = need_inspection_summaries
+        sim_analyses = {"all SBs": self.campaign.sb_simulation_analyses}
+        need_inspection_analyses = [analysis for analysis in
+                                    self.campaign.sb_simulation_analyses
+                                    if analysis.analysis_result.inspection_reasons]
+        sim_analyses["SBs needing inspection"] = need_inspection_analyses
         out = ""
-        for key,summaries in sim_summaries.items():
+        for key,analyses in sim_analyses.items():
             out += f"number of SBs failing with reason X at at least one hour angle ({key}):\n"
-            fail_reasons = self.get_fail_reasons_per_SB(summaries)
+            fail_reasons = self.get_fail_reasons_per_SB(analyses)
             out += self.get_count_lines(fail_reasons)
         return out
 
