@@ -8,7 +8,6 @@ Created on Thu Mar  5 15:53:28 2026
 
 
 import logging
-from batch_simulations.domain.calibrator import CALIBRATOR_TYPES
 from batch_simulations.infrastructure.table_writer import TableWriter
 from batch_simulations.application.single_SB_simulation import SingleSBSimulation
 import pandas as pd
@@ -80,11 +79,15 @@ class CampaignResultFormatter:
         row = {}
         self.add_general_info(row=row, sb_table_row=sb_table_row)
         self.add_simulation_info(row=row, sb_sim_analysis=sb_sim_analysis)
+        inspection_reasons = sb_sim_analysis.analysis_result.inspection_reasons
+        self.add_inspection_reasons(row=row,inspection_reasons=inspection_reasons)
+        recommended_state = sb_sim_analysis.analysis_result.recommended_state
+        self.add_recommended_state(row=row,recommended_state=recommended_state)
         if sb_sim_analysis.sb is not None:
             self.add_note_to_aod(row=row, sb=sb)
             self.add_query_calibrators(row=row,sb=sb)
             self.add_hardcoded_calibrators(row=row, sb=sb)
-            self.add_HA_limits(row=row, sb=sb)
+            self.add_HA_limits(row=row, sb_sim_analysis=sb_sim_analysis)
         return row
 
     def add_general_info(self,row,sb_table_row):
@@ -122,6 +125,8 @@ class CampaignResultFormatter:
             if sb_sim_analysis.analysis_result.recommended_HA_limits is not None:
                 row[f"HA_{lim}_recommended"]\
                       = sb_sim_analysis.analysis_result.recommended_HA_limits[lim].hour
+            else:
+                row[f"HA_{lim}_recommended"] = pd.NA
         row["HA_is_restricted"] = sb_sim_analysis.sb.HA_is_restricted()
 
     def add_simulation_info(self, row, sb_sim_analysis):
@@ -135,13 +140,18 @@ class CampaignResultFormatter:
             unexpected_error = sb_sim_analysis.unexpected_error
             row["simulations"] = unexpected_error["error_message"]
             row["traceback_of_unexpected_error"] = unexpected_error["full_traceback"]
-        inspection_reasons = sb_sim_analysis.analysis_result.inspection_reasons
+
+    @staticmethod
+    def add_inspection_reasons(row, inspection_reasons):
         row["inspection_reasons"] = ("; ".join(inspection_reasons) if inspection_reasons
                                      else pd.NA)
-        if sb_sim_analysis.analysis_result.recommended_state is None:
+
+    @staticmethod
+    def add_recommended_state(row,recommended_state):
+        if recommended_state is None:
             row["recommended_state"] = pd.NA
         else:
-            row["recommended_state"] = sb_sim_analysis.analysis_result.recommended_state
+            row["recommended_state"] = recommended_state
 
     @staticmethod
     def build_per_HA_summary_string(simulation_results, HAs):
@@ -199,7 +209,7 @@ class CampaignResultFormatter:
     def summarize_inspection_reasons(self):
         inspection_reasons = []
         for sim_analysis in self.campaign.sb_simulation_analyses:
-            inspection_reasons += sim_analysis.analysis_result.inspection_reasons
+            inspection_reasons += list(sim_analysis.analysis_result.inspection_reasons)
         return "inspection reasons:\n" + self.get_count_lines(inspection_reasons)
 
     @staticmethod
