@@ -28,7 +28,10 @@ sb_table_array_config_12m = "c43-5"
 
 class FakeWriter:
     get_ToO_selection = Writer.get_ToO_selection
-    get_selection_for_setting_to_Waiting = Writer.get_selection_for_setting_to_Waiting
+    get_waiting_for_calibrator_selection = Writer.get_waiting_for_calibrator_selection
+    get_ready_selection = Writer.get_ready_selection
+    get_no_hardcoded_selection = Writer.get_no_hardcoded_selection
+    get_selection_for_setting_to_WaitingForP2G = Writer.get_selection_for_setting_to_WaitingForP2G
     get_selection_for_setting_to_Ready = Writer.get_selection_for_setting_to_Ready
     merge_with_up_to_date_sb_table = Writer.merge_with_up_to_date_sb_table
     update_master_table = Writer.update_master_table
@@ -40,7 +43,7 @@ class FakeWriter:
         return Writer.remove_missing(merged)
     def __init__(self):
         #it's important to make a new table each time a new instance is created,
-        #because inside some tests, the table is modified inplace
+        #because inside some tests, the table is modified in-place
         self.up_to_date_sb_table = SBTable(input_filepaths=sb_table_filepaths,
                                            array_config_12m=sb_table_array_config_12m,
                                            SB_filter=None)
@@ -61,8 +64,8 @@ class TestProTrackStateChangeWriter:
                                    .iloc[::-1].reset_index(drop=True)
         assert (merged["sb_state_updated"]==expected_updated_states).all()
         assert not fake_writer.master_table["sb_state_flag"].isna().all()
-        assert (merged["sb_state_flag"].fillna("")
-                ==fake_writer.master_table["sb_state_flag"].fillna("")).all()
+        assert (merged["sb_state_flag"]
+                ==fake_writer.master_table["sb_state_flag"]).all()
         expected_updated_state_flags\
                   = fake_writer.up_to_date_sb_table.data["sb_state_flag"]\
                       .iloc[::-1].reset_index(drop=True).fillna("")
@@ -154,6 +157,35 @@ class TestProTrackStateChangeWriter:
         ToO_selection = fake_writer.get_ToO_selection()
         assert list(ToO_selection) == [True,False,True]
 
+    def test_get_waiting_for_calibrator_selection(self):
+        fake_writer = FakeWriter()
+        fake_writer.master_table = pd.DataFrame({"sb_state":["Ready",
+                                                             "Waiting",
+                                                             "Waiting"],
+                                                 "sb_state_flag":[pd.NA,
+                                                                  "ForCalibrator",
+                                                                  "ForP2G"]})
+        waiting_for_calibrator = fake_writer.get_waiting_for_calibrator_selection()
+        assert list(waiting_for_calibrator) == [False,True,False]
+
+    def test_get_ready_selection(self):
+        fake_writer = FakeWriter()
+        fake_writer.master_table = pd.DataFrame({"sb_state":["Ready",
+                                                             "Waiting",
+                                                             "Waiting"],
+                                                 "sb_state_flag":[pd.NA,
+                                                                  "ForCalibrator",
+                                                                  "ForP2G"]})
+        ready = fake_writer.get_ready_selection()
+        assert list(ready) == [True,False,False]
+
+    def test_get_no_hardcoded_selection(self):
+        fake_writer = FakeWriter()
+        hardcoded_calibrators = ["bandpass (JXY)","",pd.NA,"check (JMiraculix)"]
+        fake_writer.master_table = pd.DataFrame({"hardcoded_calibrators":hardcoded_calibrators})
+        no_hardcoded = fake_writer.get_no_hardcoded_selection()
+        assert list(no_hardcoded) == [False,True,True,False]
+
     @staticmethod
     def generate_row(template,**kwargs):
         out = template.copy()
@@ -161,44 +193,80 @@ class TestProTrackStateChangeWriter:
             out[key] = value
         return out
 
-    def test_get_selection_for_setting_to_Waiting(self):
-        fake_writer = FakeWriter()
-        template = {"code":"2025.1.00001.S",
-                    "sb_state":"Ready",
-                    "should_be_Waiting":True}
-        ToO = self.generate_row(template=template,code="2013.1.01245.T")
-        already_waiting = self.generate_row(template=template,sb_state="Waiting")
-        should_not_be_waiting = self.generate_row(template=template,should_be_Waiting=False)
-        combination = self.generate_row(template=template,sb_state="Waiting",
-                                        should_be_Waiting=False)
-        fake_writer.master_table = pd.DataFrame([template,ToO,already_waiting,
-                                                 should_not_be_waiting,
-                                                 combination])
-        selection = fake_writer.get_selection_for_setting_to_Waiting()
-        assert list(selection) == [True,False,False,False,False]
-
     def test_get_selection_for_setting_to_Ready(self):
         fake_writer = FakeWriter()
         template = {"code":"2025.1.00001.S",
                     "sb_state":"Waiting",
                     "sb_state_flag":"ForCalibrator",
-                    "should_be_Waiting":False,
+                    "recommended_state":"Ready",
                     "hardcoded_calibrators":""}
         hardcoded_None = self.generate_row(template=template,hardcoded_calibrators=None)
         ToO = self.generate_row(template=template,code="2013.1.01245.T")
-        already_ready = self.generate_row(template=template,sb_state="Ready")
+        already_ready = self.generate_row(template=template,sb_state="Ready",
+                                          sb_state_flag="")
         waiting_JAO = self.generate_row(template=template,sb_state_flag="WaitingForJAO")
-        should_be_waiting = self.generate_row(template=template,should_be_Waiting=True)
+        should_be_waiting = self.generate_row(template=template,recommended_state="Waiting")
+        should_be_waitingforp2g = self.generate_row(template=template,recommended_state="WaitingForP2G")
         has_hardcoded = self.generate_row(template=template,
-                                          hardcoded_calibrators="Polarization; Bandpass")
+                                          hardcoded_calibrators="Polarization (J12); Bandpass (J45)")
         combination = self.generate_row(template=template,sb_state="Ready",
-                                        hardcoded_calibrators="Bandpass")
+                                        hardcoded_calibrators="Bandpass (J23)")
         fake_writer.master_table = pd.DataFrame([template,hardcoded_None,ToO,
                                                  already_ready,waiting_JAO,
-                                                 should_be_waiting,has_hardcoded,
-                                                 combination])
+                                                 should_be_waiting,should_be_waitingforp2g,
+                                                 has_hardcoded,combination])
         selection = fake_writer.get_selection_for_setting_to_Ready()
-        assert list(selection) == [True,]*2+[False]*6
+        assert list(selection) == [True,]*2+[False]*7
+
+    def test_get_selection_for_setting_to_WaitingForP2G_for_recommended_Waiting(self):
+        #if recommendation is Waiting, then the transition should only happen
+        #for SBs in Ready
+        fake_writer = FakeWriter()
+        template = {"code":"2025.1.00001.S",
+                    "sb_state":"Ready",
+                    "sb_state_flag":"",
+                    "recommended_state":"Waiting"}
+        ToO = self.generate_row(template=template,code="2013.1.01245.T")
+        already_waiting_for_cal = self.generate_row(template=template,sb_state="Waiting",
+                                                    sb_state_flag="ForCalibrator")
+        already_waiting_for_p2g = self.generate_row(template=template,sb_state="Waiting",
+                                                    sb_state_flag="ForP2G")
+        ready_recommended = self.generate_row(template=template,recommended_state="Ready")
+        waiting_JAO = self.generate_row(template=template,sb_state="Waiting",
+                                        sb_state_flag="WaitingForJAO")
+        combination = self.generate_row(template=template,sb_state="Waiting",
+                                        sb_state_flag="ForCalibrator",
+                                        recommended_state="Ready")
+        fake_writer.master_table = pd.DataFrame([template,ToO,already_waiting_for_cal,
+                                                 already_waiting_for_p2g,
+                                                 ready_recommended,waiting_JAO,
+                                                 combination])
+        selection = fake_writer.get_selection_for_setting_to_WaitingForP2G()
+        assert list(selection) == [True] + [False]*6
+
+    def test_get_selection_for_setting_to_WaitingForP2G_for_recommended_WaitingForP2G(self):
+        #if recommendation is WaitingForP2G, then the transition should happen from
+        #both Ready and WaitingForCalibrator
+        fake_writer = FakeWriter()
+        template = {"code":"2025.1.00001.S",
+                    "sb_state":"Ready",
+                    "sb_state_flag":"",
+                    "recommended_state":"WaitingForP2G"}
+        waitingforcalibrator = self.generate_row(template=template,sb_state="Waiting",
+                                                 sb_state_flag="ForCalibrator")
+        waitingforp2g = self.generate_row(template=template,sb_state="Waiting",
+                                                 sb_state_flag="ForP2G")
+        ToO = self.generate_row(template=template,code="2013.1.01245.T")
+        ready_recommended = self.generate_row(template=template,recommended_state="Ready")
+        combination = self.generate_row(template=template,sb_state="Waiting",
+                                        sb_state_flag="ForCalibrator",
+                                        recommended_state="Ready")
+        fake_writer.master_table = pd.DataFrame([template,waitingforcalibrator,
+                                                 waitingforp2g,ToO,
+                                                 ready_recommended,
+                                                 combination])
+        selection = fake_writer.get_selection_for_setting_to_WaitingForP2G()
+        assert list(selection) == [True]*2 + [False]*4
 
     def test_get_table_base(self):
         class Fake:
@@ -247,7 +315,7 @@ class TestProTrackStateChangeWriter:
                                              state_change["targetSubstate"],
                                              state_change["comment"])):
                 assert PT.iloc[0,index] == expected_value
-            assert not PT.isna().any().any()
+            assert not PT.isna().any(axis=None)
 
     def test_write_tables_for_ProTrack_state_changes(self):
         #just testing if this runs
@@ -261,7 +329,7 @@ class TestProTrackStateChangeWriter:
             write_tables_for_ProTrack_state_changes = Writer.write_tables_for_ProTrack_state_changes
             def get_selection_for_setting_to_Ready(self):
                 return table.sb_state == "Waiting"
-            def get_selection_for_setting_to_Waiting(self):
+            def get_selection_for_setting_to_WaitingForP2G(self):
                 return table.sb_state == "Ready"
         fake = Fake()
         with tempfile.TemporaryDirectory() as tmpdirname:

@@ -24,8 +24,16 @@ class ProTrackStateChangeWriter:
         self.up_to_date_sb_table = up_to_date_sb_table
         self.update_master_table()
 
-    def merge_with_up_to_date_sb_table(self):
+    def update_master_table(self):
         logging.info("ProTrackWriter: going to update master table")
+        merged = self.merge_with_up_to_date_sb_table()
+        merged = self.remove_missing(merged=merged)
+        self.analyse_number_of_updates(merged=merged)
+        for key in ("sb_state","sb_state_flag"):
+            merged[key] = merged[f"{key}_updated"]
+        self.master_table = merged.drop(columns=["sb_state_updated", "sb_state_flag_updated"])
+
+    def merge_with_up_to_date_sb_table(self):
         lookup = self.up_to_date_sb_table.data[["sb_uid", "sb_state", "sb_state_flag"]]
         if lookup.sb_uid.duplicated().any():
             raise ValueError("duplicated SB UIDs")
@@ -35,8 +43,8 @@ class ProTrackStateChangeWriter:
     @staticmethod
     def remove_missing(merged):
         missing = merged["sb_state_updated"].isna()
-        logging.info(f"{missing.sum()} SBs are missing in the up-to-date table:")
         missing_uids = merged.loc[missing, "sb_uid"].tolist()
+        logging.info(f"{missing.sum()} SBs are missing in the up-to-date table:")
         logging.info(str(missing_uids))
         logging.info("these missing SBs will not be considered for state changes")
         return merged[~missing]
@@ -51,14 +59,6 @@ class ProTrackStateChangeWriter:
     # def analyse_state_updates(self,merged):
     #     self.check_missing_sb_state(merged=merged)
     #     self.analyse_number_of_updates(merged=merged)
-
-    def update_master_table(self):
-        merged = self.merge_with_up_to_date_sb_table()
-        merged = self.remove_missing(merged)
-        self.analyse_number_of_updates(merged=merged)
-        for key in ("sb_state","sb_state_flag"):
-            merged[key] = merged[f"{key}_updated"]
-        self.master_table = merged.drop(columns=["sb_state_updated", "sb_state_flag_updated"])
 
     # def get_current_state(self,sb_uid):
     #     matches = self.sb_table.data[self.sb_table.data["sb_uid"] == sb_uid]
@@ -92,26 +92,45 @@ class ProTrackStateChangeWriter:
     def get_ToO_selection(self):
         return self.master_table.code.str.endswith('.T')
 
-    def get_selection_for_setting_to_Waiting(self):
-        is_ToO = self.get_ToO_selection()
-        #careful, need to put parenthesis:
-        return ((~is_ToO) & self.master_table["should_be_Waiting"]
-                & (self.master_table["sb_state"] == "Ready"))
+    def get_waiting_for_calibrator_selection(self):
+        return ((self.master_table["sb_state"] == "Waiting")
+               & (self.master_table["sb_state_flag"] == "ForCalibrator"))
+
+    def get_ready_selection(self):
+        return self.master_table["sb_state"] == "Ready"
+
+    def get_no_hardcoded_selection(self):
+        #depending on how the master_table was read, empty string might
+        #be converted to NA (e.g. with read_csv), so need to cover that:
+        return ((self.master_table["hardcoded_calibrators"] == "")
+               |(self.master_table["hardcoded_calibrators"].isna()))
 
     def get_selection_for_setting_to_Ready(self):
         #remember to only set stuff to Ready that does not have
         #hardcoded calibrators
         is_ToO = self.get_ToO_selection()
+        is_waitingforcalibrator = self.get_waiting_for_calibrator_selection()
+        no_hardcoded = self.get_no_hardcoded_selection()
         return (
                 (~is_ToO)
-                & (self.master_table["sb_state"] == "Waiting")
-                & (self.master_table["sb_state_flag"] == "ForCalibrator")
-                & (~self.master_table["should_be_Waiting"])
-                #depending on how the master_table was read, empty string might
-                #be converted to NA (e.g. with read_csv), so need to cover that:
-                & ((self.master_table["hardcoded_calibrators"] == "")
-                   |(self.master_table["hardcoded_calibrators"].isna()))
+                & no_hardcoded
+                & is_waitingforcalibrator
+                & (self.master_table["recommended_state"] == "Ready")
                 )
+
+    def get_selection_for_setting_to_WaitingForP2G(self):
+        is_ToO = self.get_ToO_selection()
+        is_ready = self.get_ready_selection()
+        #careful, need to put parenthesis:
+        ready_but_should_be_waiting = ((~is_ToO)
+                           & is_ready
+                           & (self.master_table["recommended_state"]=="Waiting"))
+        is_waitingforcalibrator = self.get_waiting_for_calibrator_selection()
+        eligible_for_waitingforp2g = is_ready | is_waitingforcalibrator
+        should_be_waitingforp2g = ((~is_ToO)
+                                 & (self.master_table["recommended_state"]=="WaitingForP2G")
+                                 & eligible_for_waitingforp2g)
+        return ready_but_should_be_waiting | should_be_waitingforp2g
 
     def get_table_base(self,state_change):
         return f"set_to_{state_change['targetState']+state_change['targetSubstate']}_{self.campaign_name}"
@@ -136,7 +155,7 @@ class ProTrackStateChangeWriter:
                           "targetState":"Ready",
                           "targetSubstate":"",
                           "comment":"batch simulations: no issues, setting to Ready"},
-                         {"selection":self.get_selection_for_setting_to_Waiting(),
+                         {"selection":self.get_selection_for_setting_to_WaitingForP2G(),
                           "targetState":"Waiting",
                           "targetSubstate":"ForP2G",
                           "comment":"batch simulations: simulation failure"}]
