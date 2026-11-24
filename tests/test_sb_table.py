@@ -16,8 +16,9 @@ import tempfile
 class TestSBTable:
 
     input_folder = Path("tests/input_tables")
-    input_filepaths = {"12m":input_folder / "configuration_lookup_table_cycle_12.csv",
-                       "7m":input_folder / "2026-02-06_schedBlockList_7M.csv"}
+    input_filepaths = {"12m":input_folder / "configuration_lookup_table_cycle_13_20261120.csv",
+                       "7m":input_folder / "2026-11-20_schedBlockList_7M.csv"}
+    project_uid_lookup_filepath = input_folder / "2026-11-20_projectList.csv"
     data12m = pd.read_csv(input_filepaths["12m"])
     data7m = pd.read_csv(input_filepaths["7m"])
 
@@ -38,6 +39,7 @@ class TestSBTable:
     def test_read_12m_input(self):
         input_filepaths = {"12m":self.input_filepaths["12m"],"7m":None}
         table = SBTable(input_filepaths=input_filepaths,array_config_12m="c43-5",
+                        project_uid_lookup_filepath=self.project_uid_lookup_filepath,
                         SB_filter=None)
         data_selection = ~self.data12m["sb_state"].isin( ('FullyObserved','ObservingTimedOut'))\
                          & self.data12m["selected_c5"]
@@ -52,6 +54,7 @@ class TestSBTable:
     def test_read_7m_input(self):
         input_filepaths = {"12m":None,"7m":self.input_filepaths["7m"]}
         table = SBTable(input_filepaths=input_filepaths, array_config_12m=None,
+                        project_uid_lookup_filepath=self.project_uid_lookup_filepath,
                         SB_filter=None)
         read_data = table.read_7m_input()
         assert len(read_data) == len(self.data7m)
@@ -59,6 +62,7 @@ class TestSBTable:
 
     def test_read_input(self):
         table = SBTable(input_filepaths=self.input_filepaths,array_config_12m="c43-4",
+                        project_uid_lookup_filepath=self.project_uid_lookup_filepath,
                         SB_filter=None)
         data_selection_12m = self.data12m["selected_c4"]\
                 & ~self.data12m["sb_state"].isin( ('FullyObserved','ObservingTimedOut'))
@@ -67,13 +71,14 @@ class TestSBTable:
         assert sorted(read_data["sb_uid"])\
                == sorted(list(self.data12m[data_selection_12m]["sb_uid"])
                          + list(self.data7m["SB UID"]))
-        assert sorted(read_data.columns) == sorted(SBTable.input_columns)
+        assert sorted(read_data.columns) == sorted(SBTable.input_columns+["project_uid"])
 
     def test_consistency_check_SB_UID(self,monkeypatch):
         #check that a normal tables work fine:
         all_sb_uids = pd.concat([self.data12m["sb_uid"],self.data7m["SB UID"]])
         assert not all_sb_uids.duplicated().any()
         table = SBTable(input_filepaths=self.input_filepaths,array_config_12m="c43-4",
+                        project_uid_lookup_filepath=self.project_uid_lookup_filepath,
                         SB_filter=None)
         #now a table with duplicated SB UIDs:
         duplicated_uid_data = table.data.copy()
@@ -85,16 +90,20 @@ class TestSBTable:
         with tempfile.TemporaryDirectory() as tmp_dir:
             filename = Path("12m_data_duplicated_uids.csv")
             filepath = tmp_dir / filename
+            #remove project_uid, because init will recreate it
+            duplicated_uid_data = duplicated_uid_data.drop(columns=["project_uid"])
             duplicated_uid_data.to_csv(filepath)
             def read_input(x):
                 x.data = duplicated_uid_data
             monkeypatch.setattr(SBTable,"read_input",read_input)
             with pytest.raises(ValueError):
                 SBTable(input_filepaths={"12m":filepath,"7m":None},
+                        project_uid_lookup_filepath=self.project_uid_lookup_filepath,
                         array_config_12m="c43-5",SB_filter=None)
 
     def test_check_consistency_empty_state(self,monkeypatch):
         table = SBTable(input_filepaths=self.input_filepaths,array_config_12m="c43-4",
+                        project_uid_lookup_filepath=self.project_uid_lookup_filepath,
                         SB_filter=None)
         invalid_data = table.data.copy()
         invalid_data.at[0,"sb_state"] = pd.NA
@@ -104,12 +113,15 @@ class TestSBTable:
         with tempfile.TemporaryDirectory() as tmp_dir:
             filename = Path("invalid_data.csv")
             filepath = tmp_dir / filename
+            #remove project_uid, because init will recreate it
+            invalid_data = invalid_data.drop(columns=["project_uid"])
             invalid_data.to_csv(filepath)
             def read_input(x):
                 x.data = invalid_data
             monkeypatch.setattr(SBTable,"read_input",read_input)
             with pytest.raises(ValueError):
                 SBTable(input_filepaths={"12m":filepath,"7m":None},
+                        project_uid_lookup_filepath=self.project_uid_lookup_filepath,
                         array_config_12m="c43-5",SB_filter=None)
 
     def test_filter_p2g(self):
@@ -117,6 +129,7 @@ class TestSBTable:
         def p2g_filter(row):
             return row["p2g_account"] == p2g
         table = SBTable(input_filepaths=self.input_filepaths,array_config_12m="c43-4",
+                        project_uid_lookup_filepath=self.project_uid_lookup_filepath,
                         SB_filter=p2g_filter)
         data_selection_12m = self.data12m["selected_c4"] & (self.data12m["p2g_account"]==p2g)\
                             &  ~self.data12m["sb_state"].isin( ('FullyObserved','ObservingTimedOut'))
@@ -133,7 +146,8 @@ class TestSBTable:
         def project_filter(row):
             return row["code"] == code
         table = SBTable(input_filepaths=self.input_filepaths,
-                       array_config_12m="c43-4",SB_filter=project_filter)
+                        project_uid_lookup_filepath=self.project_uid_lookup_filepath,
+                        array_config_12m="c43-4",SB_filter=project_filter)
         data_selection_12m = self.data12m["selected_c4"] &  (self.data12m["code"]==code)\
                             &  ~self.data12m["sb_state"].isin( ('FullyObserved','ObservingTimedOut'))
         data12m_filtered = self.data12m[data_selection_12m]
@@ -143,6 +157,43 @@ class TestSBTable:
         assert len(table.data) == len(data12m_filtered) + len(data7m_filtered)
         assert sorted(table.data["sb_uid"])\
                == sorted(list(data12m_filtered["sb_uid"]) + list(data7m_filtered["SB UID"]))
+
+    def test_read_project_uid_lookup(self):
+        class FakeSBTable:
+            read_project_uid_lookup = SBTable.read_project_uid_lookup
+            project_uid_lookup_filepath = self.project_uid_lookup_filepath
+        fake_table = FakeSBTable()
+        fake_table.read_project_uid_lookup()
+        assert "code" in fake_table.project_uid_lookup.columns
+        assert "project_uid" in fake_table.project_uid_lookup.columns
+
+    def test_add_project_uids(self):
+        table = SBTable(input_filepaths=self.input_filepaths,array_config_12m="c43-4",
+                        project_uid_lookup_filepath=self.project_uid_lookup_filepath,
+                        SB_filter=None)
+        for row in table.data.itertuples():
+            expected_project_uid = table.project_uid_lookup[
+                           table.project_uid_lookup.code==row.code].project_uid
+            assert expected_project_uid.values == row.project_uid
+
+    def test_add_project_uids_nonunique_codes(self):
+        table = SBTable(input_filepaths=self.input_filepaths,array_config_12m="c43-4",
+                        project_uid_lookup_filepath=self.project_uid_lookup_filepath,
+                        SB_filter=None)
+        table.project_uid_lookup.at[1, 'code'] = table.project_uid_lookup.at[0, 'code']
+        table.data = table.data.drop(columns=["project_uid"])
+        with pytest.raises(pd.errors.MergeError):
+            table.add_project_uids()
+        
+    def test_add_project_uids_missing_codes(self):
+        table = SBTable(input_filepaths=self.input_filepaths,array_config_12m="c43-4",
+                        project_uid_lookup_filepath=self.project_uid_lookup_filepath,
+                        SB_filter=None)
+        table.project_uid_lookup = table.project_uid_lookup.iloc[:1]
+        table.data = table.data.drop(columns=["project_uid"])
+        with pytest.raises(RuntimeError):
+            table.add_project_uids()
+
 
     def test_get_number_of_12m_and_7m_SBs(self):
         fake_data = pd.DataFrame({"sbname":["SDSSJ231_a_09_TM2",

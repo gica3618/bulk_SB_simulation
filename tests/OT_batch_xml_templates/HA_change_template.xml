@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BatchActions>
+
+  <EditSB projectuid="uid://A001/X15b9/X113f">
+			  
+		<sb uid="uid://A001/X15b4/X82">
+		    
+		    <!--  <description> is used to update the description of the SB  -->
+		    
+			<description> This is a new description  </description>
+			
+			<!--  <minha> is used to define the minimum HA of the SB. Units are one of: h,min,s -->
+
+			<minha angle="-10" unit="h"/>
+
+			<!--  <maxha> is used to define the maximum HA of the SB. Units are one of: h,min,s  -->
+			<maxha angle="3" unit="h"/>
+		</sb>
+		
+	</EditSB> 
+	
+</BatchActions>

@@ -16,11 +16,15 @@ class SBTable:
                      "sb_state_flag"]
     excluded_states_12m = ('FullyObserved','ObservingTimedOut')
 
-    def __init__(self,input_filepaths,array_config_12m,SB_filter):
+    def __init__(self,input_filepaths,project_uid_lookup_filepath,
+                 array_config_12m,SB_filter):
         self.input_filepaths = input_filepaths
+        self.project_uid_lookup_filepath = project_uid_lookup_filepath
         self.array_config_12m = array_config_12m
         self.SB_filter = SB_filter
         self.read_input()
+        self.read_project_uid_lookup()
+        self.add_project_uids()
         self.check_data_consistency()
 
     def determine_12m_array_config_number(self):
@@ -86,9 +90,20 @@ class SBTable:
         data = data[self.input_columns]
         return data
 
+    def read_project_uid_lookup(self):
+        self.project_uid_lookup = pd.read_csv(self.project_uid_lookup_filepath)
+        self.project_uid_lookup.rename(columns={'Project Code':'code',
+                                                "Project UID":"project_uid"},
+                                       inplace=True)
+
+    def add_project_uids(self):
+        self.data = self.data.merge(self.project_uid_lookup[['code', 'project_uid']],
+                                    on='code', how='left', validate="many_to_one")
+        if self.data.project_uid.isna().any():
+            raise RuntimeError("incomplete project UID assignment")
+
     def get_number_of_12m_and_7m_SBs(self):
         is_7m = self.data.sbname.apply(lambda sbname: sbname.split("_")[-1]=="7M")
         number_of_7m_SBs = is_7m.sum()
         return {"12m":len(self.data)-number_of_7m_SBs,
                 "7m":number_of_7m_SBs}
-        

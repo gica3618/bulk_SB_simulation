@@ -49,8 +49,8 @@ class SimulationCampaign:
 
 class CampaignResultFormatter:
 
-    sb_table_keys_for_output = ("code","sbname","sb_uid","p2g_account","sb_state",
-                                "sb_state_flag")
+    sb_table_keys_for_output = ("code","project_uid","sbname","sb_uid",
+                                "p2g_account","sb_state","sb_state_flag")
     writer = TableWriter()
     p2g_columns = TableWriter.column_order.copy()
     p2g_columns.remove("traceback_of_unexpected_error")

@@ -35,10 +35,8 @@ class ProTrackStateChangeWriter:
 
     def merge_with_up_to_date_sb_table(self):
         lookup = self.up_to_date_sb_table.data[["sb_uid", "sb_state", "sb_state_flag"]]
-        if lookup.sb_uid.duplicated().any():
-            raise ValueError("duplicated SB UIDs")
         return self.master_table.merge(lookup,on="sb_uid",how="left",
-                                       suffixes=("", "_updated"))
+                                       suffixes=("", "_updated"), validate="one_to_one")
 
     @staticmethod
     def remove_missing(merged):

@@ -14,15 +14,14 @@ import pandas as pd
 import tempfile
 from pathlib import Path
 import pytest
-import re
-import numpy as np
 import logging
 from types import SimpleNamespace
 
 
 sb_table_folder = Path("tests/input_tables")
-sb_table_filepaths = {"12m":sb_table_folder / "configuration_lookup_table_cycle_12.csv",
-                      "7m":sb_table_folder / "2026-02-06_schedBlockList_7M.csv"}
+sb_table_filepaths = {"12m":sb_table_folder / "configuration_lookup_table_cycle_13_20261120.csv",
+                      "7m":sb_table_folder / "2026-11-20_schedBlockList_7M.csv"}
+project_uid_lookup_filepath = sb_table_folder / "2026-11-20_projectList.csv"
 sb_table_array_config_12m = "c43-5"
 
 
@@ -46,6 +45,7 @@ class FakeWriter:
         #because inside some tests, the table is modified in-place
         self.up_to_date_sb_table = SBTable(input_filepaths=sb_table_filepaths,
                                            array_config_12m=sb_table_array_config_12m,
+                                           project_uid_lookup_filepath=project_uid_lookup_filepath,
                                            SB_filter=None)
 
 
@@ -74,6 +74,7 @@ class TestProTrackStateChangeWriter:
 
     def test_merge_duplicated_uids(self):
         fake_writer = FakeWriter()
+        fake_writer.master_table = fake_writer.up_to_date_sb_table.data.copy()
         fake_writer.up_to_date_sb_table.data.at[1,"sb_uid"]\
                       = fake_writer.up_to_date_sb_table.data.at[0,"sb_uid"]
         with pytest.raises(ValueError):
