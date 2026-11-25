@@ -29,7 +29,7 @@ class FakeWriter:
     get_ToO_selection = Writer.get_ToO_selection
     get_waiting_for_calibrator_selection = Writer.get_waiting_for_calibrator_selection
     get_ready_selection = Writer.get_ready_selection
-    get_no_hardcoded_selection = Writer.get_no_hardcoded_selection
+    #get_no_hardcoded_selection = Writer.get_no_hardcoded_selection
     get_selection_for_setting_to_WaitingForP2G = Writer.get_selection_for_setting_to_WaitingForP2G
     get_selection_for_setting_to_Ready = Writer.get_selection_for_setting_to_Ready
     merge_with_up_to_date_sb_table = Writer.merge_with_up_to_date_sb_table
@@ -180,12 +180,12 @@ class TestProTrackStateChangeWriter:
         ready = fake_writer.get_ready_selection()
         assert list(ready) == [True,False,False]
 
-    def test_get_no_hardcoded_selection(self):
-        fake_writer = FakeWriter()
-        hardcoded_calibrators = ["bandpass (JXY)","",pd.NA,"check (JMiraculix)"]
-        fake_writer.master_table = pd.DataFrame({"hardcoded_calibrators":hardcoded_calibrators})
-        no_hardcoded = fake_writer.get_no_hardcoded_selection()
-        assert list(no_hardcoded) == [False,True,True,False]
+    # def test_get_no_hardcoded_selection(self):
+    #     fake_writer = FakeWriter()
+    #     hardcoded_calibrators = ["bandpass (JXY)","",pd.NA,"check (JMiraculix)"]
+    #     fake_writer.master_table = pd.DataFrame({"hardcoded_calibrators":hardcoded_calibrators})
+    #     no_hardcoded = fake_writer.get_no_hardcoded_selection()
+    #     assert list(no_hardcoded) == [False,True,True,False]
 
     @staticmethod
     def generate_row(template,**kwargs):
@@ -199,25 +199,21 @@ class TestProTrackStateChangeWriter:
         template = {"code":"2025.1.00001.S",
                     "sb_state":"Waiting",
                     "sb_state_flag":"ForCalibrator",
-                    "recommended_state":"Ready",
-                    "hardcoded_calibrators":""}
-        hardcoded_None = self.generate_row(template=template,hardcoded_calibrators=None)
+                    "recommended_state":"Ready"}
         ToO = self.generate_row(template=template,code="2013.1.01245.T")
         already_ready = self.generate_row(template=template,sb_state="Ready",
                                           sb_state_flag="")
         waiting_JAO = self.generate_row(template=template,sb_state_flag="WaitingForJAO")
         should_be_waiting = self.generate_row(template=template,recommended_state="Waiting")
         should_be_waitingforp2g = self.generate_row(template=template,recommended_state="WaitingForP2G")
-        has_hardcoded = self.generate_row(template=template,
-                                          hardcoded_calibrators="Polarization (J12); Bandpass (J45)")
         combination = self.generate_row(template=template,sb_state="Ready",
                                         hardcoded_calibrators="Bandpass (J23)")
-        fake_writer.master_table = pd.DataFrame([template,hardcoded_None,ToO,
+        fake_writer.master_table = pd.DataFrame([template,ToO,
                                                  already_ready,waiting_JAO,
                                                  should_be_waiting,should_be_waitingforp2g,
-                                                 has_hardcoded,combination])
+                                                 combination])
         selection = fake_writer.get_selection_for_setting_to_Ready()
-        assert list(selection) == [True,]*2+[False]*7
+        assert list(selection) == [True,]+[False]*6
 
     def test_get_selection_for_setting_to_WaitingForP2G_for_recommended_Waiting(self):
         #if recommendation is Waiting, then the transition should only happen
@@ -298,6 +294,9 @@ class TestProTrackStateChangeWriter:
             master_table = table
             get_table_base = Writer.get_table_base
             write_state_change_tables = Writer.write_state_change_tables
+            @staticmethod
+            def write_ProTrack_csv(*args,**kwargs):
+                return Writer.write_ProTrack_csv(*args,**kwargs)
         fake = Fake()
         base = fake.get_table_base(state_change=state_change)
         with tempfile.TemporaryDirectory() as tmpdirname:
@@ -318,6 +317,30 @@ class TestProTrackStateChangeWriter:
                 assert PT.iloc[0,index] == expected_value
             assert not PT.isna().any(axis=None)
 
+    def test_write_protrack_csv(self):
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            filename = Path("test.csv")
+            master_table_data = {"sb_uid": ['uid12345',]*4}
+            table = pd.DataFrame(master_table_data)
+            selection = [True,]*len(table)
+            selection[0] = False
+            targetState = "Waiting"
+            targetSubstate = "ForJAO"
+            comment = "Asterix"
+            Writer.write_ProTrack_csv(
+                  table=table,selection=selection,targetState=targetState,
+                  targetSubstate=targetSubstate,comment=comment,
+                  filename=filename,output_dir=tmpdirname)
+            filepath = tmpdirname / filename
+            assert filepath.exists()
+            written = pd.read_csv(filepath,header=None)
+            assert len(written.columns) == 4
+            #I set one selection to False, so I know the expected length:
+            assert len(written) == len(table)-1
+            assert all(written.iloc[:,1]==targetState)
+            assert all(written.iloc[:,2]==targetSubstate)
+            assert all(written.iloc[:,3]==comment)
+
     def test_write_tables_for_ProTrack_state_changes(self):
         #just testing if this runs
         table = pd.DataFrame({"sb_uid":["uid:1","uid:2"],
@@ -332,6 +355,9 @@ class TestProTrackStateChangeWriter:
                 return table.sb_state == "Waiting"
             def get_selection_for_setting_to_WaitingForP2G(self):
                 return table.sb_state == "Ready"
+            @staticmethod
+            def write_ProTrack_csv(*args,**kwargs):
+                return Writer.write_ProTrack_csv(*args,**kwargs)
         fake = Fake()
         with tempfile.TemporaryDirectory() as tmpdirname:
             fake.write_tables_for_ProTrack_state_changes(output_dir=tmpdirname)

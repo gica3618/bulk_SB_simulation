@@ -48,29 +48,3 @@ class TestTableWriter:
                                            output_dir=tmpdirname)
                 backup_filepath = filepath.with_stem(f"{filename.stem}_backup*")
                 assert len(glob.glob(str(backup_filepath))) == 1
-
-    def test_write_protrack_csv(self):
-        writer = TableWriter()
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            filename = Path("test.csv")
-            master_table_data = {column: ['test',]*4 for column in
-                                 TableWriter.column_order}
-            table = pd.DataFrame(master_table_data)
-            selection = [True,]*len(table)
-            selection[0] = False
-            targetState = "Waiting"
-            targetSubstate = "ForJAO"
-            comment = "Asterix"
-            writer.write_ProTrack_csv(
-                  table=table,selection=selection,targetState=targetState,
-                  targetSubstate=targetSubstate,comment=comment,
-                  filename=filename,output_dir=tmpdirname)
-            filepath = tmpdirname / filename
-            assert filepath.exists()
-            written = pd.read_csv(filepath,header=None)
-            assert len(written.columns) == 4
-            #I set one selection to False, so I know the expected length:
-            assert len(written) == len(table)-1
-            assert all(written.iloc[:,1]==targetState)
-            assert all(written.iloc[:,2]==targetSubstate)
-            assert all(written.iloc[:,3]==comment)

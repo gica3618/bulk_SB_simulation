@@ -15,6 +15,7 @@ import datetime
 class TableWriter:
 
     column_order = ["code",
+                    "project_uid",
                     "sbname",
                     "sb_uid",
                     "p2g_account",
@@ -103,13 +104,3 @@ class TableWriter:
                      df=out, filepath=filepath,freeze_panes=freeze_panes)
         else:
             raise ValueError(f"invalid output file extension '{filepath.suffix}'")
-
-    @staticmethod
-    def write_ProTrack_csv(table,selection,targetState,targetSubstate,comment,
-                           filename,output_dir="."):
-        out = pd.DataFrame({"sb_uid":table[selection]["sb_uid"]})
-        out["targetState"] = targetState
-        out["targetSubstate"] = targetSubstate
-        out["comment"] = comment
-        filepath = Path(output_dir) / filename
-        out.to_csv(filepath,index=False,header=False)

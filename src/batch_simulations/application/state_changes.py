@@ -7,6 +7,8 @@ Created on Fri Apr 17 18:39:16 2026
 """
 
 import logging
+import pandas as pd
+from pathlib import Path
 from batch_simulations.infrastructure.table_writer import TableWriter
 
 #TODO problematic case is an SB in WaitingForCalibrator that has hardcoded
@@ -97,24 +99,22 @@ class ProTrackStateChangeWriter:
     def get_ready_selection(self):
         return self.master_table["sb_state"] == "Ready"
 
-    def get_no_hardcoded_selection(self):
+    # def get_no_hardcoded_selection(self):
         #depending on how the master_table was read, empty string might
         #be converted to NA (e.g. with read_csv), so need to cover that:
-        return ((self.master_table["hardcoded_calibrators"] == "")
-               |(self.master_table["hardcoded_calibrators"].isna()))
+        # return ((self.master_table["hardcoded_calibrators"] == "")
+        #        |(self.master_table["hardcoded_calibrators"].isna()))
 
     def get_selection_for_setting_to_Ready(self):
-        #remember to only set stuff to Ready that does not have
-        #hardcoded calibrators
+        #TODO take ToOs into account already in single_SB_simulation
         is_ToO = self.get_ToO_selection()
         is_waitingforcalibrator = self.get_waiting_for_calibrator_selection()
-        no_hardcoded = self.get_no_hardcoded_selection()
-        return (
+        selection = (
                 (~is_ToO)
-                & no_hardcoded
                 & is_waitingforcalibrator
                 & (self.master_table["recommended_state"] == "Ready")
                 )
+        return selection
 
     def get_selection_for_setting_to_WaitingForP2G(self):
         is_ToO = self.get_ToO_selection()
@@ -140,13 +140,23 @@ class ProTrackStateChangeWriter:
         base = self.get_table_base(state_change=state_change)
         writer.write_table_to_disk(dataframe=human_readable,filename=f"{base}.csv",
                                    output_dir=output_dir)
-        writer.write_ProTrack_csv(table=self.master_table,
-                                  selection=sc["selection"],
-                                  targetState=sc["targetState"],
-                                  targetSubstate=sc["targetSubstate"],
-                                  comment=sc["comment"],
-                                  filename=f"{base}_ProTrack.csv",
-                                  output_dir=output_dir)
+        self.write_ProTrack_csv(table=self.master_table,
+                                selection=sc["selection"],
+                                targetState=sc["targetState"],
+                                targetSubstate=sc["targetSubstate"],
+                                comment=sc["comment"],
+                                filename=f"{base}_ProTrack.csv",
+                                output_dir=output_dir)
+
+    @staticmethod
+    def write_ProTrack_csv(table,selection,targetState,targetSubstate,comment,
+                           filename,output_dir="."):
+        out = pd.DataFrame({"sb_uid":table[selection]["sb_uid"]})
+        out["targetState"] = targetState
+        out["targetSubstate"] = targetSubstate
+        out["comment"] = comment
+        filepath = Path(output_dir) / filename
+        out.to_csv(filepath,index=False,header=False)
 
     def write_tables_for_ProTrack_state_changes(self,output_dir="."):
         state_changes = [{"selection":self.get_selection_for_setting_to_Ready(),
