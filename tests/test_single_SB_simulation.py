@@ -72,7 +72,10 @@ class TestSingleSBSimulation:
                                == self.general_sb_simulation.array_config_12m
         sb.is_7m = True
         sb.requires_TP = True
-        assert self.general_sb_simulation.get_array_config(sb) == "aca.cm10.pm3.cfg"
+        current_file_path = Path(__file__).resolve()
+        src_path = current_file_path.parent.parent / "src"
+        aca_filepath = src_path / "batch_simulations" / "application" / "aca.cm10.pm3.cfg"
+        assert self.general_sb_simulation.get_array_config(sb) == str(aca_filepath)
         sb.requires_TP = False
         assert self.general_sb_simulation.get_array_config(sb) == "7m"
 

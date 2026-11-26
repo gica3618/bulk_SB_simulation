@@ -53,6 +53,9 @@ class SingleSBSimulation:
 
     default_HA_step = Angle(1*u.hour)
     fine_HA_step = Angle(0.25*u.hour)    
+    current_file_path = Path(__file__).resolve()
+    #save the config filepath as str, to avoid issues downstream
+    aca10_pm3_filepath = str(current_file_path.with_name("aca.cm10.pm3.cfg"))
 
     def __init__(self,project_code,sb_name,date,array_config_12m):
         self.project_code = project_code
@@ -68,7 +71,7 @@ class SingleSBSimulation:
     def get_array_config(self, sb):
         if not sb.is_7m:
             return self.array_config_12m
-        return "aca.cm10.pm3.cfg" if sb.requires_TP else "7m"
+        return self.aca10_pm3_filepath if sb.requires_TP else "7m"
 
     def download_xml(self):
         downloader = XMLDownloader(project_code=self.project_code,

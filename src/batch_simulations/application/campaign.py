@@ -131,7 +131,7 @@ class CampaignResultFormatter:
 
     def add_simulation_info(self, row, sb_sim_analysis):
         if sb_sim_analysis.unexpected_error is None:
-            row["simulated_config"] = sb_sim_analysis.simulated_config
+            row["simulated_config"] = sb_sim_analysis.simulated_config.split("/")[-1]
             row["simulated_date"] = sb_sim_analysis.simulated_date
             row["simulations"] = self.build_per_HA_summary_string(
                                     simulation_results=sb_sim_analysis.simulation_results,

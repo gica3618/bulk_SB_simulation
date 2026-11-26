@@ -7,6 +7,7 @@ Created on Wed Nov 25 13:57:45 2026
 """
 
 import pandas as pd
+import numpy as np
 import pytest
 import tempfile
 from pathlib import Path
@@ -34,6 +35,10 @@ master_table_data = [#general case
                      {"HA_min":-2, "HA_max":2.25,
                       "HA_min_recommended":-2,"HA_max_recommended":2.25,
                       "recommended_state":"Ready"},
+                     #no update needed, very small difference
+                     {"HA_min":-2.00002, "HA_max":2.25000005,
+                      "HA_min_recommended":-2,"HA_max_recommended":2.25,
+                      "recommended_state":"Ready"},
                      #no min update needed
                      {"HA_min":-2, "HA_max":12,
                       "HA_min_recommended":-2,"HA_max_recommended":2.25,
@@ -55,7 +60,14 @@ master_table["sb_uid"] = sb_uid
 campaign_name = "test"
 
 writer = HAChangeWriter(campaign_name=campaign_name,master_table=master_table)
-expected_selection = [True,False,True,True,False,True,True,False]
+expected_selection = [True,False,True,True,False,False,True,True,False]
+
+def test_HA_equal():
+    assert HAChangeWriter.HA_equal(1.25,1.25)
+    assert HAChangeWriter.HA_equal(-1.25,-1.250001)
+    assert not HAChangeWriter.HA_equal(1.25,1.3)
+    assert not HAChangeWriter.HA_equal(0,0.05)
+    assert np.all(HAChangeWriter.HA_equal([0,-1.23,3.45],[0.0001,-1.23,3.450002]))
 
 def test_get_selection_for_HA_updates():
     selection = writer.get_selection_for_HA_updates()
