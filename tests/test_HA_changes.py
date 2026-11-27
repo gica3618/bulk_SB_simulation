@@ -15,44 +15,73 @@ import xml.etree.ElementTree as ET
 from batch_simulations.application.HA_changes import HAChangeWriter
 
 
-master_table_data = [#general case
-                     {"HA_min":-12, "HA_max":12,
-                      "HA_min_recommended":-2,"HA_max_recommended":2.25,
-                      "recommended_state":"Ready"},
-                     #no recommendation
-                     {"HA_min":-12, "HA_max":12,
-                      "HA_min_recommended":pd.NA,"HA_max_recommended":pd.NA,
-                      "recommended_state":"Ready"},
-                     #no max recommendation
-                     {"HA_min":-12, "HA_max":12,
-                      "HA_min_recommended":-2,"HA_max_recommended":pd.NA,
-                      "recommended_state":"Ready"},
-                     #no min recommendation
-                     {"HA_min":-12, "HA_max":12,
-                      "HA_min_recommended":pd.NA,"HA_max_recommended":1.5,
-                      "recommended_state":"Ready"},
-                     #no update needed
-                     {"HA_min":-2, "HA_max":2.25,
-                      "HA_min_recommended":-2,"HA_max_recommended":2.25,
-                      "recommended_state":"Ready"},
-                     #no update needed, very small difference
-                     {"HA_min":-2.00002, "HA_max":2.25000005,
-                      "HA_min_recommended":-2,"HA_max_recommended":2.25,
-                      "recommended_state":"Ready"},
-                     #no min update needed
-                     {"HA_min":-2, "HA_max":12,
-                      "HA_min_recommended":-2,"HA_max_recommended":2.25,
-                      "recommended_state":"Ready"},
-                     #no max update needed
-                     {"HA_min":-12, "HA_max":2.25,
-                      "HA_min_recommended":-2,"HA_max_recommended":2.25,
-                      "recommended_state":"Ready"},
-                     #not recommended for Ready
-                     {"HA_min":-12, "HA_max":2.25,
-                      "HA_min_recommended":-2,"HA_max_recommended":2.25,
-                      "recommended_state":"Waiting"},
-                     ]
-master_table = pd.DataFrame(master_table_data)
+test_cases = [#general case
+              {"data":{"HA_min":-12, "HA_max":12,
+                       "HA_min_recommended":-2,"HA_max_recommended":2.25,
+                       "recommended_state":"Ready","sb_state":"Waiting",
+                       "sb_state_flag":"ForCalibrator"},
+               "should_be_selected":True},
+              #no recommendation
+              {"data":{"HA_min":-12, "HA_max":12,
+                       "HA_min_recommended":pd.NA,"HA_max_recommended":pd.NA,
+                       "recommended_state":"Ready","sb_state":"Ready",
+                       "sb_state_flag":pd.NA},
+               "should_be_selected":False},
+              #no max recommendation
+              {"data":{"HA_min":-12, "HA_max":12,
+                       "HA_min_recommended":-2,"HA_max_recommended":pd.NA,
+                       "recommended_state":"Ready","sb_state":"Ready",
+                       "sb_state_flag":pd.NA},
+               "should_be_selected":True},
+              #no min recommendation
+              {"data":{"HA_min":-12, "HA_max":12,
+                       "HA_min_recommended":pd.NA,"HA_max_recommended":1.5,
+                       "recommended_state":"Ready","sb_state":"Waiting",
+                       "sb_state_flag":"ForCalibrator"},
+               "should_be_selected":True},
+              #no update needed
+              {"data":{"HA_min":-2, "HA_max":2.25,
+                       "HA_min_recommended":-2,"HA_max_recommended":2.25,
+                       "recommended_state":"Ready","sb_state":"Waiting",
+                       "sb_state_flag":"ForCalibrator"},
+               "should_be_selected":False},
+              #no update needed, very small difference
+              {"data":{"HA_min":-2.00002, "HA_max":2.25000005,
+                       "HA_min_recommended":-2,"HA_max_recommended":2.25,
+                       "recommended_state":"Ready","sb_state":"Ready",
+                       "sb_state_flag":pd.NA},
+               "should_be_selected":False},
+              #no min update needed
+              {"data":{"HA_min":-2, "HA_max":12,
+                       "HA_min_recommended":-2,"HA_max_recommended":2.25,
+                       "recommended_state":"Ready","sb_state":"Ready",
+                       "sb_state_flag":pd.NA},
+               "should_be_selected":True},
+              #no max update needed
+              {"data":{"HA_min":-12, "HA_max":2.25,
+                       "HA_min_recommended":-2,"HA_max_recommended":2.25,
+                       "recommended_state":"Ready","sb_state":"Waiting",
+                       "sb_state_flag":"ForCalibrator"},
+               "should_be_selected":True},
+              #not recommended for Ready
+              {"data":{"HA_min":-12, "HA_max":2.25,
+                       "HA_min_recommended":-2,"HA_max_recommended":2.25,
+                       "recommended_state":"Waiting","sb_state":"Waiting",
+                       "sb_state_flag":"ForCalibrator"},
+               "should_be_selected":False},
+              #currently WaitingForP2G
+              {"data":{"HA_min":-12, "HA_max":12,
+                       "HA_min_recommended":-2,"HA_max_recommended":2,
+                       "recommended_state":"Ready","sb_state":"Waiting",
+                       "sb_state_flag":"ForP2G"},
+               "should_be_selected":False},
+               #currently WaitingForTrigger
+               {"data":{"HA_min":-12, "HA_max":12,
+                        "HA_min_recommended":-2,"HA_max_recommended":2,
+                        "recommended_state":"Ready","sb_state":"Waiting",
+                        "sb_state_flag":"ForTrigger"},
+               "should_be_selected":False}]
+master_table = pd.DataFrame([c["data"] for c in test_cases])
 project_uid = "projectuid"
 master_table["project_uid"] = project_uid
 sb_uid = "sbuid"
@@ -60,7 +89,7 @@ master_table["sb_uid"] = sb_uid
 campaign_name = "test"
 
 writer = HAChangeWriter(campaign_name=campaign_name,master_table=master_table)
-expected_selection = [True,False,True,True,False,False,True,True,False]
+expected_selection = [c["should_be_selected"] for c in test_cases]
 
 def test_HA_equal():
     assert HAChangeWriter.HA_equal(1.25,1.25)

@@ -9,7 +9,8 @@ Created on Fri Apr 17 18:39:16 2026
 import logging
 import pandas as pd
 from pathlib import Path
-from batch_simulations.infrastructure.table_writer import TableWriter
+from batch_simulations.infrastructure.table_utils\
+                import TableWriter, contains_ToO,contains_hardcoded_calibrator
 
 #TODO problematic case is an SB in WaitingForCalibrator that has hardcoded
 #calibrators. those I cannot evaluate with simulations
@@ -106,27 +107,24 @@ class ProTrackStateChangeWriter:
         #        |(self.master_table["hardcoded_calibrators"].isna()))
 
     def get_selection_for_setting_to_Ready(self):
-        #TODO take ToOs into account already in single_SB_simulation
-        is_ToO = self.get_ToO_selection()
         is_waitingforcalibrator = self.get_waiting_for_calibrator_selection()
-        selection = (
-                (~is_ToO)
-                & is_waitingforcalibrator
-                & (self.master_table["recommended_state"] == "Ready")
-                )
+        selection = (is_waitingforcalibrator
+                    & (self.master_table["recommended_state"] == "Ready"))
+        if contains_hardcoded_calibrator(table=self.master_table[selection]):
+            raise RuntimeError("SBs with hardcoded calibrators "
+                               +"should not be put to Ready")
+        if contains_ToO(table=self.master_table[selection]):
+            raise RuntimeError("ToOs should not be put to Ready")
         return selection
 
     def get_selection_for_setting_to_WaitingForP2G(self):
-        is_ToO = self.get_ToO_selection()
         is_ready = self.get_ready_selection()
         #careful, need to put parenthesis:
-        ready_but_should_be_waiting = ((~is_ToO)
-                           & is_ready
+        ready_but_should_be_waiting = (is_ready
                            & (self.master_table["recommended_state"]=="Waiting"))
         is_waitingforcalibrator = self.get_waiting_for_calibrator_selection()
         eligible_for_waitingforp2g = is_ready | is_waitingforcalibrator
-        should_be_waitingforp2g = ((~is_ToO)
-                                 & (self.master_table["recommended_state"]=="WaitingForP2G")
+        should_be_waitingforp2g = ((self.master_table["recommended_state"]=="WaitingForP2G")
                                  & eligible_for_waitingforp2g)
         return ready_but_should_be_waiting | should_be_waitingforp2g
 

@@ -10,6 +10,26 @@ import pandas as pd
 from pathlib import Path
 import logging
 import datetime
+from batch_simulations.domain.calibrator import CALIBRATOR_TYPES
+
+
+def contains_ToO(table):
+    return table.code.str.endswith('.T').any()
+
+def check_exceptions(exceptions):
+    for exc in exceptions:
+        if exc not in CALIBRATOR_TYPES:
+            raise ValueError(f"invalid calibrator type '{exc}' given as exception")
+
+def contains_hardcoded_calibrator(table,exceptions=None):
+    if exceptions is None:
+        exceptions = []
+    check_exceptions(exceptions)
+    to_check = [c for c in CALIBRATOR_TYPES if c not in exceptions]
+    for cal_type in to_check:
+        if table.hardcoded_calibrators.str.contains(cal_type,na=False).any():
+            return True
+    return False
 
 
 class TableWriter:

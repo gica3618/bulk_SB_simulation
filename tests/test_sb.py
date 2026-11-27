@@ -18,46 +18,51 @@ from astropy import units as u
 class TestSB:
 
     @staticmethod
-    def generate_sb(filename):
+    def generate_sb(filename,project_code="2026.1.00001.S"):
         xml_folder = Path('tests/xmls')
         filepath = xml_folder / filename
-        return BuildSBFromXML.build(filepath)
+        return BuildSBFromXML.build(xml_filepath=filepath,
+                                    project_code=project_code)
 
-    @staticmethod
-    def assert_is_not_XX(sb,exluded):
-        for is_XX in ("is_7m","is_VLBI","is_Polarisation","is_B2B","is_Solar"):
-            if is_XX in exluded:
-                continue
-            assert not getattr(sb, is_XX)
+    # @staticmethod
+    # def assert_is_not_XX(sb,exluded):
+    #     for is_XX in ("is_7m","is_VLBI","is_Polarisation","is_B2B","is_Solar"):
+    #         if is_XX in exluded:
+    #             continue
+    #         assert not getattr(sb, is_XX)
 
     def test_is_polarisation(self):
         sb = self.generate_sb("example_polarisation_2023.1.00013.S.xml")
-        assert sb.is_Polarisation
-        self.assert_is_not_XX(sb=sb, exluded=["is_Polarisation",])
+        assert sb.is_Polarisation()
+        sb = self.generate_sb("2025.1.01279.S_general_SB.xml")
+        assert not sb.is_Polarisation()
 
-    def test_is_vlbi(self):
-        sb = self.generate_sb("example_VLBI_2022.1.01268.V.xml")
-        assert sb.is_VLBI
-        self.assert_is_not_XX(sb=sb, exluded=["is_VLBI",])
+    # def test_is_vlbi(self):
+    #     sb = self.generate_sb("example_VLBI_2022.1.01268.V.xml")
+    #     assert sb.is_VLBI
+    #     self.assert_is_not_XX(sb=sb, exluded=["is_VLBI",])
 
-    def test_solar(self):
-        sb = self.generate_sb("example_solar_2022.1.01544.S.xml")
-        assert sb.is_Solar
-        self.assert_is_not_XX(sb=sb, exluded=["is_Solar",])
+    # def test_solar(self):
+    #     sb = self.generate_sb("example_solar_2022.1.01544.S.xml")
+    #     assert sb.is_Solar
+    #     self.assert_is_not_XX(sb=sb, exluded=["is_Solar",])
 
-    def test_is_b2b(self):
-        sb = self.generate_sb("2025.1.01389.S_B2B.xml")
-        assert sb.is_B2B
-        self.assert_is_not_XX(sb=sb, exluded=["is_B2B",])
+    # def test_is_b2b(self):
+    #     sb = self.generate_sb("2025.1.01389.S_B2B.xml")
+    #     assert sb.is_B2B
+    #     self.assert_is_not_XX(sb=sb, exluded=["is_B2B",])
 
     def test_is_7m(self):
-        sb = self.generate_sb("example_NoteToAoD_2023.1.00578.S.xml")
-        assert sb.is_7m
-        self.assert_is_not_XX(sb=sb, exluded=["is_7m",])
-
-    def test_general_init(self):
+        sb = self.generate_sb("example_general_7M_Band3.xml")
+        assert sb.is_7m()
         sb = self.generate_sb("2025.1.01279.S_general_SB.xml")
-        self.assert_is_not_XX(sb=sb,exluded=[])
+        assert not sb.is_7m()
+
+    def test_is_ToO(self):
+        sb = self.generate_sb("2025.1.01279.S_general_SB.xml","2022.1.00002.T")
+        assert sb.is_ToO()
+        sb = self.generate_sb("2025.1.01279.S_general_SB.xml","2025.1.01279.S")
+        assert not sb.is_ToO()
 
     def test_consistency_checks(self):
         self.generate_sb("2025.1.01279.S_general_SB.xml")
@@ -173,11 +178,11 @@ class TestSB:
         check(dsa["min"] + eps, dsa["max"] - eps, True)
         check(dsa["min"] - eps, dsa["max"] + eps, False)
 
-    def test_add_metadata(self):
+    def test_note_to_AoD(self):
         sb = self.generate_sb("2025.1.01279.S_general_SB.xml")
-        key,value = "test_key",12.34
-        sb.add_metadata(key=key,value=value)
-        assert sb.metadata[key] == value
+        assert sb.note_to_AoD is None
+        sb = self.generate_sb("example_NoteToAoD_2023.1.00578.S.xml")
+        assert sb.note_to_AoD == "test Note to AoD"
 
     def test_single_execution_time(self):
         sb = self.generate_sb("single_execution_SB.xml")

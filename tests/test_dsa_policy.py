@@ -23,7 +23,7 @@ class TestDSAPolicy:
     def generate_sb(filename):
         xml_folder = Path('tests/xmls')
         filepath = xml_folder / filename
-        return BuildSBFromXML.build(filepath)
+        return BuildSBFromXML.build(filepath,"2022.1.00001.S")
 
     def test_general_north(self):
         sb = self.generate_sb("2025.1.01279.S_general_SB.xml")

@@ -19,43 +19,12 @@ from batch_simulations.domain.job_planner import JobPlanner
 import batch_simulations.utils.angle_comparisons as ac
 
 
-
-        # logging.info("should run again with finer HA step because some "
-        #              +"simulations failed")
-
-
-# def get_unnecessarily_restricted_HAs(has_hardcoded_cals,HAs,results,OT_allowed_HA):
-#     unnecessarily_restricted_HAs = []
-#     if has_hardcoded_cals:
-#         #if a simulation is successful, I can only conclude that it is indeed fine
-#         #if there are no hardcoded calibrators; so for SBs with hardcoded
-#         #calibrators, I cannot say that HA restrictions should be lifted
-#         #even if simulation runs fine
-#         logging.info("SB has hardcoded calibrators, cannot determine if HAs are "
-#                      +"unnecessarily restricted")
-#         return unnecessarily_restricted_HAs
-#     #tol = 1e-10 #rad; needed because of machine precision rounding errors
-#     for HA,result in zip(HAs,results):
-#         HA_is_excluded = not HA_is_allowed(HA=HA,OT_allowed_HA=OT_allowed_HA)
-#         # HA_is_excluded = (HA.rad + tol < OT_allowed_HA["min"].rad)\
-#         #                  or (HA.rad-tol > OT_allowed_HA["max"].rad)
-#         if result.success and HA_is_excluded:
-#             unnecessarily_restricted_HAs.append(HA)
-#     if not unnecessarily_restricted_HAs:
-#         logging.info("HA range is not unnecessarily restricted")
-#     else:
-#         logging.info("unnecessarily restricted HA(s): "
-#                      +f"{[HA.hour for HA in unnecessarily_restricted_HAs]}")
-#     return unnecessarily_restricted_HAs
-
-
 class SingleSBSimulation:
 
     default_HA_step = Angle(1*u.hour)
     fine_HA_step = Angle(0.25*u.hour)    
     current_file_path = Path(__file__).resolve()
-    #save the config filepath as str, to avoid issues downstream
-    aca10_pm3_filepath = str(current_file_path.with_name("aca.cm10.pm3.cfg"))
+    aca10_pm3_filepath = current_file_path.with_name("aca.cm10.pm3.cfg")
 
     def __init__(self,project_code,sb_name,date,array_config_12m):
         self.project_code = project_code
@@ -69,9 +38,9 @@ class SingleSBSimulation:
         return Path.cwd() / filename
 
     def get_array_config(self, sb):
-        if not sb.is_7m:
+        if not sb.is_7m():
             return self.array_config_12m
-        return self.aca10_pm3_filepath if sb.requires_TP else "7m"
+        return str(self.aca10_pm3_filepath) if sb.requires_TP else "7m"
 
     def download_xml(self):
         downloader = XMLDownloader(project_code=self.project_code,
@@ -244,8 +213,11 @@ class SingleSBSimulationAnalysis:
         #case without failures, or only "unobservable" type failures
         #if PolCal is hardcoded, I allow suggesting Ready, but if any other calibrator
         #is hardcoded, I do not allow it
-        if fail_categories.issubset(set(["unobservable"]))\
-                                and not self.sb.any_calibrator_except_PolCal_hardcoded():
+        #also, I never recommend Ready for ToOs; often the coordinates are not determined yet,
+        #so simulation results are unreliable
+        if (fail_categories.issubset(set(["unobservable"]))
+                     and not self.sb.any_calibrator_except_PolCal_hardcoded()
+                     and not self.sb.is_ToO()):
             self.analysis_result.recommended_HA_limits = {"min":Angle(-12*u.hour),
                                                           "max":Angle(12*u.hour)}
             self.analysis_result.suggest_state("Ready")
@@ -273,24 +245,28 @@ class SingleSBSimulationAnalysis:
         else:
             self.analyse_missing_calibrator_no_hardcoded()
 
-    def analyse_missing_calibrator_hardcoded(self):
-        #I do not attempt to change HA restrictions of SBs with
-        #hardcoded calibrators
-        #TODO should I add inspection reason in any case?
+    def do_not_fix_missing_calibrator_with_HA_limits(self):
+        self.analysis_result.inspection_reasons.add("missing calibrator")
         if self.missing_calibrator_at_allowed_HA():
-            self.analysis_result.inspection_reasons.add("missing calibrator")
             self.analysis_result.suggest_state("Waiting")
 
+    def analyse_missing_calibrator_hardcoded(self):
+        #this applies to both regular and ToO
+        self.do_not_fix_missing_calibrator_with_HA_limits()
+
     def analyse_missing_calibrator_no_hardcoded(self):
-        recommended_HA_limits = self.get_recommended_HA_limits()
-        if recommended_HA_limits is None:
-            #cannot fix by changing HA limits
-            self.analysis_result.inspection_reasons.add("missing calibrator")
-            if self.missing_calibrator_at_allowed_HA():
-                self.analysis_result.suggest_state("Waiting")
+        if self.sb.is_ToO():
+            #for ToO, often the coordinates are not determined yet,
+            #so simulation results are unreliable
+            self.do_not_fix_missing_calibrator_with_HA_limits()
         else:
-            self.analysis_result.recommended_HA_limits = recommended_HA_limits
-            self.analysis_result.suggest_state("Ready")
+            recommended_HA_limits = self.get_recommended_HA_limits()
+            if recommended_HA_limits is None:
+                #cannot fix by changing HA limits
+                self.do_not_fix_missing_calibrator_with_HA_limits()
+            else:
+                self.analysis_result.recommended_HA_limits = recommended_HA_limits
+                self.analysis_result.suggest_state("Ready")
 
     def HA_is_allowed(self,HA):
         return (ac.geq(HA,self.sb.OT_allowed_HA["min"])
@@ -353,35 +329,6 @@ class SingleSBSimulationAnalysis:
                     return True
         return False
 
-    # def HA_range_has_issues(self,HA_limits):
-    #     #TODO test needed
-    #     results = self.get_sim_results(HA_limits=HA_limits)
-    #     if not results:
-    #         return
-    #     for result in results:
-    #         if not result.success:
-    #             if result.fail_reason.category != "unobservable":
-    #                 return True
-    #     return False
-
-    # def determine_HA_limits_necessary_to_fix_SB(self):
-    #     best = {}
-    #     for HA_min,HA_max in itertools.product(self.HAs,self.HAs):
-    #         #TODO machine precision issue?
-    #         if HA_min >= HA_max:
-    #             continue
-    #         HA_limits = {"min": HA_min, "max": HA_max}
-    #         has_issues = self.HA_range_has_issues(HA_limits=HA_limits)
-    #         if has_issues is None:
-    #             raise RuntimeError("for the HA limits given here, there should always "
-    #                                +"be some simulated HAs")
-    #         if has_issues:
-    #             continue
-    #         #TODO machine precision issue?
-    #         if not best or HA_max - HA_min > best["max"] - best["min"]:
-    #             best = HA_limits
-    #     return best 
-
     def width_of_successful_HAs_that_are_excluded(self,HA_limits):
         HA_widths = self.HA_widths()
         excluded_width = 0
@@ -427,64 +374,3 @@ class SingleSBSimulationAnalysis:
         if ac.geq(HA_limits["max"], dsa_limits["max"]):
             HA_limits["max"] = Angle(12*u.hour)
         return HA_limits
-        
-
-
-    # def analyse_HA_restriction(self):
-    #     unnecessarily_restricted_HAs = get_unnecessarily_restricted_HAs(
-    #                                       has_hardcoded_cals=self.sb.any_calibrator_hardcoded(),
-    #                                       HAs=self.HAs, results=self.simulation_results,
-    #                                       OT_allowed_HA=self.sb.OT_allowed_HA)
-    #     if not unnecessarily_restricted_HAs:
-    #         logging.info("HA is not unnecessarily restricted")
-    #     else:
-    #         ha_str = ", ".join(str(HA.hour) for HA in unnecessarily_restricted_HAs)
-    #         logging.info(f"HA is unnecessarily restricted at following HA(s): {ha_str}")
-    #         self.analysis_result.inspection_reasons.add(f"unnecessarily restricted HA(s): {ha_str}")
-
-    # def analyse_simulation_failures(self):
-        #logic implemented here:
-        # - any error at disallowed HA does not trigger anything
-        # - "unobservable" never triggers anything
-        # - "server error" triggers inspection if occuring at allowed HA
-        # - any other error occuring at allowed HA triggers inspection and Waiting
-
-
-        # server_error = False
-        # failed_and_needs_action = False
-        # should_be_Waiting = False
-    
-        # for HA, result in zip(self.HAs, self.simulation_results):
-        #     if result.success:
-        #         continue
-            
-        #     if not HA_is_allowed(HA=HA,OT_allowed_HA=self.sb.OT_allowed_HA):
-        #         continue
-            
-        #     if result.fail_reason.category == "unobservable":
-        #         continue
-    
-        #     if result.fail_reason.category == "server error":
-        #         #server error needs inspection, but does not need to be waiting
-        #         self.analysis_result.inspection_reasons.add("server error")
-        #         continue
-    
-        #     self.analysis_result.inspection_reasons.add("simulation failure")
-        #     self.analysis_result.should_be_Waiting = True
-        #     failed_and_needs_action = True
-        #     should_be_Waiting = True
-    
-        # inspection_reasons = []
-        # if server_error:
-        #     inspection_reasons.append("server error")
-        # if failed_and_needs_action:
-        #     inspection_reasons.append("simulation failure")
-        # return AnalysisResult(inspection_reasons=inspection_reasons,
-        #                       should_be_Waiting=should_be_Waiting)
-
-    # def analyse_no_unexpected_error(self):
-        # self.analysis_result = AnalysisResult()
-        # for ana in (self.analyse_runnable_HA_range(),
-        #             self.analyse_HA_restriction(),
-        #             self.analyse_simulation_failures()):
-        #     self.analysis_result = self.analysis_result.merge(ana)

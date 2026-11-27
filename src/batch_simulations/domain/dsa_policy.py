@@ -37,7 +37,7 @@ class DSAPolicy:
         #On the other hand, we can do the second execution at an HA that is larger
         #than what would be allowed in the first execution. So we should not decrease max_HA,
         #because DSA might consider up to max_HA at least for second/third executions
-        if sb.is_Polarisation:
+        if sb.is_Polarisation():
             logging.info('polarization SB, going to check if min HA considered'
                          +' by DSA needs to be adjudsted')
             min_pol_cal_HA = Angle(-3*u.hour) #see Best Practices

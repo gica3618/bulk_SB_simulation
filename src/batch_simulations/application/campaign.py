@@ -8,7 +8,7 @@ Created on Thu Mar  5 15:53:28 2026
 
 
 import logging
-from batch_simulations.infrastructure.table_writer import TableWriter
+from batch_simulations.infrastructure.table_utils import TableWriter
 from batch_simulations.application.single_SB_simulation import SingleSBSimulation
 import pandas as pd
 import datetime
@@ -96,7 +96,7 @@ class CampaignResultFormatter:
 
     @staticmethod
     def add_note_to_aod(row,sb):
-        row["note_to_AoD"] = sb.metadata["note_to_AoD"]
+        row["note_to_AoD"] = sb.note_to_AoD
 
     @staticmethod
     def add_query_calibrators(row,sb):

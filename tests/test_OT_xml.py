@@ -286,4 +286,4 @@ def test_get_nb_of_SB_executions():
 
 def test_sb_builder():
     filepath = xml_folder / "2025.1.01279.S_general_SB.xml"
-    BuildSBFromXML.build(filepath)
+    BuildSBFromXML.build(filepath,"2025.1.01279.S")

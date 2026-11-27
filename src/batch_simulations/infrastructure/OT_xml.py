@@ -242,10 +242,10 @@ class OT_XML():
 class BuildSBFromXML:
 
     @staticmethod
-    def build(xml_filepath):
+    def build(xml_filepath,project_code):
         xml = OT_XML(xml_filepath)
-        metadata = {"note_to_AoD":xml.get_NotetoAoD()}
-        return SB(calibrators=xml.read_calibrators_from_observing_groups(),
+        return SB(project_code=project_code,
+                  calibrators=xml.read_calibrators_from_observing_groups(),
                   science_targets=xml.get_science_targets(),
                   mode_name=xml.read_modeName(),
                   nominal_configs=xml.get_nominal_configurations(),
@@ -254,7 +254,7 @@ class BuildSBFromXML:
                   requires_TP=xml.read_RequiresTPAntennas(),
                   total_execution_time=xml.get_estimated_total_execution_time(),
                   number_of_executions=xml.get_nb_of_SB_executions(),
-                  metadata=metadata)
+                  note_to_AoD=xml.get_NotetoAoD())
 
 
 if __name__ == "__main__":

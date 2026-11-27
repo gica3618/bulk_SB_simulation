@@ -16,39 +16,7 @@ from batch_simulations.application.single_SB_simulation import SingleSBSimulatio
         AnalysisResult, SingleSBSimulationAnalysis
 from batch_simulations.domain.sb import SB
 from dataclasses import dataclass
-
-
-# def test_get_unnecessarily_restricted_HAs():
-#     class Result:
-#         def __init__(self, success):
-#             self.success = success
-#     with_fail = [Result(False), Result(True)]
-#     all_success = [Result(True), Result(True)]
-#     HAs = [Angle(-1*u.hour),Angle(1*u.hour)]
-#     OT_allowed_HA_wide = {"min":Angle(-12*u.hour),"max":Angle(12*u.hour)}
-#     OT_allowed_HA_narrow = {"min":Angle(0*u.hour),"max":Angle(12*u.hour)}
-#     #hardcoded, so cannot decide if unnecessary or not:
-#     for OT_allowed_HA,results in itertools.product(
-#             (OT_allowed_HA_wide,OT_allowed_HA_narrow),(with_fail,all_success)):
-#         res_HAs = get_unnecessarily_restricted_HAs(
-#                          has_hardcoded_cals=True,HAs=HAs,results=results,
-#                          OT_allowed_HA=OT_allowed_HA)
-#         assert res_HAs == []
-#     #success, but HA not excluded
-#     res_HAs = get_unnecessarily_restricted_HAs(
-#                      has_hardcoded_cals=False,HAs=HAs,results=all_success,
-#                      OT_allowed_HA=OT_allowed_HA_wide)
-#     assert res_HAs == []
-#     #HA excluded, but not success
-#     res_HAs = get_unnecessarily_restricted_HAs(
-#                      has_hardcoded_cals=False,HAs=HAs,results=with_fail,
-#                      OT_allowed_HA=OT_allowed_HA_narrow)
-#     assert res_HAs == []
-#     #HA excluded and success
-#     res_HAs = get_unnecessarily_restricted_HAs(
-#                      has_hardcoded_cals=False,HAs=HAs,results=all_success,
-#                      OT_allowed_HA=OT_allowed_HA_narrow)
-#     assert res_HAs == [Angle(-1*u.hour)]
+import itertools
 
 
 class TestSingleSBSimulation:
@@ -64,13 +32,15 @@ class TestSingleSBSimulation:
 
     def test_get_array_config(self):
         class FakeSB:
-            is_7m = None
             requires_TP = None
+            def is_7m(self):
+                return self.is_7m_flag
+                
         sb = FakeSB()
-        sb.is_7m = False
+        sb.is_7m_flag = False
         assert self.general_sb_simulation.get_array_config(sb)\
                                == self.general_sb_simulation.array_config_12m
-        sb.is_7m = True
+        sb.is_7m_flag = True
         sb.requires_TP = True
         current_file_path = Path(__file__).resolve()
         src_path = current_file_path.parent.parent / "src"
@@ -277,8 +247,8 @@ class TestAnalysisResult:
 class TestSingleSBSimulationAnalysis:
 
     def generate_fake_analysis(self,result_codes,HAs=[Angle(-1*u.hour),Angle(0*u.hour),Angle(1*u.hour)],
-                               hardcoded=False,hardcoded_except_PolCal=False,
-                               OT_allowed_HA={"min":Angle(-4*u.hour),"max":Angle(3*u.hour)},
+                               hardcoded=False,hardcoded_except_PolCal=False,is_ToO=False,
+                               OT_allowed_HA={"min":Angle(-12*u.hour),"max":Angle(12*u.hour)},
                                unexpected_error=None,
                                DSA_HA_limits={"min":Angle(-4*u.hour),"max":Angle(3*u.hour)}):
         if unexpected_error is not None:
@@ -291,21 +261,24 @@ class TestSingleSBSimulationAnalysis:
 
         class FakeSB:
             def __init__(self,OT_allowed_HA,hardcoded,hardcoded_except_PolCal,
-                         DSA_HA_limits):
+                         DSA_HA_limits,is_ToO_flag):
                 self.OT_allowed_HA = OT_allowed_HA
                 self.hardcoded = hardcoded
                 self.hardcoded_except_PolCal = hardcoded_except_PolCal
-                self.DSA_HA_limits = DSA_HA_limits                
+                self.DSA_HA_limits = DSA_HA_limits
+                self.is_ToO_flag = is_ToO_flag
             def any_calibrator_hardcoded(self):
                 return self.hardcoded
             def any_calibrator_except_PolCal_hardcoded(self):
                 return self.hardcoded_except_PolCal
             def get_DSA_HA_limits(self):
                 return self.DSA_HA_limits
+            def is_ToO(self):
+                return self.is_ToO_flag
 
         sb = FakeSB(OT_allowed_HA=OT_allowed_HA,hardcoded=hardcoded,
                     hardcoded_except_PolCal=hardcoded_except_PolCal,
-                    DSA_HA_limits=DSA_HA_limits)
+                    DSA_HA_limits=DSA_HA_limits,is_ToO_flag=is_ToO)
 
         simulation_results = []
         for code in result_codes:
@@ -337,74 +310,122 @@ class TestSingleSBSimulationAnalysis:
             assert fake_analysis.analysis_result.recommended_HA_limits\
                            == {"min":Angle(-12*u.hour),"max":Angle(12*u.hour)}
             assert fake_analysis.analysis_result.inspection_reasons == set()
-            #case where a calibrator except PolCal is hardcoded:
-            fake_analysis = self.generate_fake_analysis(
-                                        result_codes=result_codes,
-                                        hardcoded_except_PolCal=True)
-            fake_analysis.analyse()
-            assert fake_analysis.analysis_result.recommended_state is None
-            assert fake_analysis.analysis_result.recommended_HA_limits is None
-            assert fake_analysis.analysis_result.inspection_reasons == set()
+            #case where a calibrator (except PolCal) is hardcoded, or ToO:
+            for hardcoded_except_PolCal,is_ToO in itertools.product([True,False],[True,False]):
+                if not hardcoded_except_PolCal and not is_ToO:
+                    continue
+                fake_analysis = self.generate_fake_analysis(
+                                            result_codes=result_codes,
+                                            hardcoded_except_PolCal=hardcoded_except_PolCal,
+                                            is_ToO=is_ToO)
+                fake_analysis.analyse()
+                assert fake_analysis.analysis_result.recommended_state is None
+                assert fake_analysis.analysis_result.recommended_HA_limits is None
+                assert fake_analysis.analysis_result.inspection_reasons == set()
 
     def test_analyse_regular_WaitingForP2G(self):
         for other_result_codes in [["success"]*2,["other"]*2,
                                    ["success","unobservable"]]:
             for result_code in ("exceeds 2h limit","server error","other"):
-                fake_analysis = self.generate_fake_analysis(
-                                     result_codes=other_result_codes+[result_code])
-                fake_analysis.analyse()
-                assert fake_analysis.analysis_result.recommended_state == "WaitingForP2G"
-                assert result_code in fake_analysis.analysis_result.inspection_reasons
-                assert fake_analysis.analysis_result.recommended_HA_limits is None
+                for hardcoded,hardcoded_except_PolCal,is_ToO in\
+                       itertools.product([True,False],[True,False],[True,False]):
+                    if not hardcoded and hardcoded_except_PolCal:
+                        #this combination does not make sense, so skip it
+                        continue
+                    fake_analysis = self.generate_fake_analysis(
+                                         result_codes=other_result_codes+[result_code],
+                                         hardcoded=hardcoded,is_ToO=is_ToO,
+                                         hardcoded_except_PolCal=hardcoded_except_PolCal)
+                    fake_analysis.analyse()
+                    assert fake_analysis.analysis_result.recommended_state == "WaitingForP2G"
+                    assert result_code in fake_analysis.analysis_result.inspection_reasons
+                    assert fake_analysis.analysis_result.recommended_HA_limits is None
 
-    def test_analyse_regular_missing_calibrator_hardcoded_nonallowed_HA(self):
-        fake_analysis = self.generate_fake_analysis(
-                             result_codes=["success","success","missing calibrator"],
-                             HAs=[Angle(-1*u.hour),Angle(0*u.hour),Angle(1*u.hour)],
-                             hardcoded=True,
-                             OT_allowed_HA={"min":Angle(-1*u.hour),"max":Angle(0.5*u.hour)})
-        fake_analysis.analyse()
-        assert fake_analysis.analysis_result.recommended_state is None
-        assert fake_analysis.analysis_result.recommended_HA_limits is None
-        assert fake_analysis.analysis_result.inspection_reasons == set()
+    def test_do_not_fix_missing_calibrator_with_HA_limits(self):
+        result_codes = ["success","success","missing calibrator"]
+        HAs = [Angle(-2*u.hour),Angle(0*u.hour),Angle(2*u.hour)]
+        #test both failure at allowed and at dis-allowed HA:
+        for i,OT_allowed_HA in enumerate([{"min":Angle(-12*u.hour),"max":Angle(12*u.hour)},
+                                          {"min":Angle(-2*u.hour),"max":Angle(0*u.hour)}]):
+            fake_analysis = self.generate_fake_analysis(
+                                 result_codes=result_codes,HAs=HAs,
+                                 OT_allowed_HA=OT_allowed_HA)
+            fake_analysis.analysis_result = AnalysisResult()
+            fake_analysis.do_not_fix_missing_calibrator_with_HA_limits()
+            assert fake_analysis.analysis_result.inspection_reasons == set(["missing calibrator" ])
+            if i == 0:
+                assert fake_analysis.analysis_result.recommended_state == "Waiting"
+            elif i == 1:
+                assert fake_analysis.analysis_result.recommended_state is None
 
-    def test_analyse_regular_missing_calibrator_hardcoded_allowed_HA(self):
-        fake_analysis = self.generate_fake_analysis(
-                             result_codes=["success","success","missing calibrator"],
-                             HAs=[Angle(-1*u.hour),Angle(0*u.hour),Angle(1*u.hour)],
-                             hardcoded=True,
-                             OT_allowed_HA={"min":Angle(-1*u.hour),"max":Angle(1*u.hour)})
-        fake_analysis.analyse()
-        assert fake_analysis.analysis_result.recommended_state == "Waiting"
-        assert fake_analysis.analysis_result.recommended_HA_limits is None
-        assert fake_analysis.analysis_result.inspection_reasons == set(["missing calibrator"])
+    def test_analyse_regular_missing_calibrator_at_nonallowed_HA_hardcoded(self):
+        for is_ToO in [True,False]:
+            fake_analysis = self.generate_fake_analysis(
+                                 result_codes=["success","success","missing calibrator"],
+                                 HAs=[Angle(-1*u.hour),Angle(0*u.hour),Angle(1*u.hour)],
+                                 hardcoded=True,
+                                 OT_allowed_HA={"min":Angle(-1*u.hour),"max":Angle(0.5*u.hour)},
+                                 is_ToO=is_ToO)
+            fake_analysis.analyse()
+            assert fake_analysis.analysis_result.recommended_state is None
+            assert fake_analysis.analysis_result.recommended_HA_limits is None
+            assert fake_analysis.analysis_result.inspection_reasons == set(["missing calibrator"])
+
+    def test_analyse_regular_missing_calibrator_at_allowed_HA_hardcoded(self):
+        for is_ToO in [True,False]:
+            fake_analysis = self.generate_fake_analysis(
+                                 result_codes=["success","success","missing calibrator"],
+                                 HAs=[Angle(-1*u.hour),Angle(0*u.hour),Angle(1*u.hour)],
+                                 hardcoded=True,is_ToO=is_ToO,
+                                 OT_allowed_HA={"min":Angle(-1*u.hour),"max":Angle(1*u.hour)})
+            fake_analysis.analyse()
+            assert fake_analysis.analysis_result.recommended_state == "Waiting"
+            assert fake_analysis.analysis_result.recommended_HA_limits is None
+            assert fake_analysis.analysis_result.inspection_reasons == set(["missing calibrator"])
 
     def test_analyse_regular_missing_calibrator_no_hardcoding_fixable(self):
-        fake_analysis = self.generate_fake_analysis(
-                             result_codes=["success","success","missing calibrator"],
-                             HAs=[Angle(-2*u.hour),Angle(0*u.hour),Angle(2*u.hour)])
-        fake_analysis.analyse()
-        assert fake_analysis.analysis_result.recommended_state == "Ready"
-        assert fake_analysis.analysis_result.recommended_HA_limits \
-            == {"min":Angle(-2*u.hour),"max":Angle(0*u.hour)}
-        assert fake_analysis.analysis_result.inspection_reasons == set()
+        result_codes = ["success","success","missing calibrator"]
+        HAs = [Angle(-2*u.hour),Angle(0*u.hour),Angle(2*u.hour)]
+        #test both failure at allowed and at dis-allowed HA:
+        for i,OT_allowed_HA in enumerate([{"min":Angle(-12*u.hour),"max":Angle(12*u.hour)},
+                                          {"min":Angle(-2*u.hour),"max":Angle(0*u.hour)}]):
+            for is_ToO in [True,False]:
+                fake_analysis = self.generate_fake_analysis(
+                                     result_codes=result_codes,HAs=HAs,
+                                     OT_allowed_HA=OT_allowed_HA,is_ToO=is_ToO)
+                fake_analysis.analyse()
+                if is_ToO:
+                    if i == 0:
+                        assert fake_analysis.analysis_result.recommended_state == "Waiting"
+                    else:
+                        assert fake_analysis.analysis_result.recommended_state is None
+                    assert fake_analysis.analysis_result.recommended_HA_limits is None
+                    assert fake_analysis.analysis_result.inspection_reasons == set(["missing calibrator"])
+                elif i == 1:
+                    assert fake_analysis.analysis_result.recommended_state == "Ready"
+                    assert fake_analysis.analysis_result.recommended_HA_limits \
+                        == {"min":Angle(-2*u.hour),"max":Angle(0*u.hour)}
+                    assert fake_analysis.analysis_result.inspection_reasons == set()
 
-    def test_analyse_regular_missing_calibrator_no_hardcoding_not_fixable_allowed_HA(self):
-        fake_analysis = self.generate_fake_analysis(
-                             result_codes=["missing calibrator"]*3)
-        fake_analysis.analyse()
-        assert fake_analysis.analysis_result.recommended_state == "Waiting"
-        assert fake_analysis.analysis_result.recommended_HA_limits is None
-        assert "missing calibrator" in fake_analysis.analysis_result.inspection_reasons
+    def test_analyse_regular_missing_calibrator_at_allowed_HA_no_hardcoding_not_fixable(self):
+        for is_ToO in (True,False):
+            fake_analysis = self.generate_fake_analysis(
+                                 result_codes=["missing calibrator"]*3,is_ToO=is_ToO)
+            fake_analysis.analyse()
+            assert fake_analysis.analysis_result.recommended_state == "Waiting"
+            assert fake_analysis.analysis_result.recommended_HA_limits is None
+            assert "missing calibrator" in fake_analysis.analysis_result.inspection_reasons
 
     def test_analyse_regular_missing_calibrator_no_hardcoding_not_fixable_disallowed_HA(self):
-        fake_analysis = self.generate_fake_analysis(
-                             result_codes=["missing calibrator"]*3,
-                             OT_allowed_HA={"min":Angle(-5*u.hour),"max":Angle(-4*u.hour)})
-        fake_analysis.analyse()
-        assert fake_analysis.analysis_result.recommended_state is None
-        assert fake_analysis.analysis_result.recommended_HA_limits is None
-        assert "missing calibrator" in fake_analysis.analysis_result.inspection_reasons
+        for is_ToO in (True,False):
+            fake_analysis = self.generate_fake_analysis(
+                                 result_codes=["missing calibrator"]*3,
+                                 OT_allowed_HA={"min":Angle(-5*u.hour),"max":Angle(-4*u.hour)},
+                                 is_ToO=is_ToO)
+            fake_analysis.analyse()
+            assert fake_analysis.analysis_result.recommended_state is None
+            assert fake_analysis.analysis_result.recommended_HA_limits is None
+            assert "missing calibrator" in fake_analysis.analysis_result.inspection_reasons
 
     def test_HA_is_allowed(self):
         fake_analysis = self.generate_fake_analysis(
@@ -559,220 +580,3 @@ class TestSingleSBSimulationAnalysis:
                         "success","missing calibrator","missing calibrator"]
         expected_limits = {"min":Angle(-2*u.hour),"max":Angle(1*u.hour)}
         check(result_codes=result_codes,expected_limits=expected_limits)
-
-
-"""
-    def test_HA_is_allowed(self):
-        OT_allowed_HA = {"min":Angle(-2.1*u.hour),"max":Angle(3*u.hour)}
-        class FakeSummary:
-            HA_is_allowed = SingleSBSimulationAnalysis.HA_is_allowed
-            sb = SimpleNamespace(OT_allowed_HA=OT_allowed_HA)
-        fake = FakeSummary()
-        for HA in (OT_allowed_HA["min"], OT_allowed_HA["max"],
-                   Angle(-2*u.hour),Angle(0*u.hour),Angle(1.1*u.hour)):
-            assert fake.HA_is_allowed(HA=HA)
-        for HA in (Angle(-2.2*u.hour),Angle(3.1*u.hour)):
-            assert not fake.HA_is_allowed(HA=HA)
-
-    def test_HA_widths(self):
-        class FakeSummary:
-            HA_widths = SingleSBSimulationSummary.HA_widths
-            HAs = [Angle(-2*u.hour),Angle(-1*u.hour),Angle(0.5*u.hour),Angle(4*u.hour)]
-        fake_summary = FakeSummary()
-        widths = fake_summary.HA_widths()
-        assert widths == [0.5,0.5+0.75,0.75+1.75,1.75]
-
-    def test_runnable_HA_amount(self):
-        class FakeSummary:
-            HAs = [Angle(-2*u.hour),Angle(-1*u.hour),Angle(0.5*u.hour),Angle(4*u.hour)]
-            HA_widths = SingleSBSimulationSummary.HA_widths
-            simulation_results = [SimpleNamespace(success=True),SimpleNamespace(success=False),
-                                  SimpleNamespace(success=True),SimpleNamespace(success=True)]
-            runnable_HA_amount = SingleSBSimulationSummary.runnable_HA_amount
-        fake_summary = FakeSummary()
-        widths = fake_summary.HA_widths()
-        usable_HA_range = fake_summary.runnable_HA_amount()
-        expected_range = widths[0]+widths[2]+widths[3]
-        assert usable_HA_range == expected_range
-
-    def test_analyse_runnable_HA_range(self):
-        class FakeSummary:
-            analyse_runnable_HA_range\
-                       = SingleSBSimulationSummary.analyse_runnable_HA_range
-            def __init__(self):
-                self.analysis_result = AnalysisResult()
-            def runnable_HA_amount(self):
-                return 2
-        fake_summary = FakeSummary()
-        fake_summary.min_runnable_HA_amount = 1
-        fake_summary.analyse_runnable_HA_range()
-        assert fake_summary.analysis_result.inspection_reasons == set()
-        assert fake_summary.analysis_result.recommended_state is None
-        
-        fake_summary = FakeSummary()
-        fake_summary.min_runnable_HA_amount = 3.3333
-        fake_summary.analyse_runnable_HA_range()
-        assert fake_summary.analysis_result.inspection_reasons\
-                                       == set(["runnable HA range is small"])
-        assert fake_summary.analysis_result.recommended_state is None
-
-    def test_analyse_HA_restriction(self):
-        class FakeSB:
-            OT_allowed_HA = {"min":Angle(-12*u.hour),"max":Angle(12*u.hour)}
-            def __init__(self,has_hardcoded):
-                self.has_hardcoded = has_hardcoded
-            def any_calibrator_hardcoded(self):
-                return self.has_hardcoded
-        class FakeSummary:
-            HAs = [Angle(-2*u.hour),Angle(-1*u.hour),Angle(0.5*u.hour),Angle(4*u.hour)]
-            simulation_results = [SimpleNamespace(success=True),SimpleNamespace(success=False),
-                                  SimpleNamespace(success=True),SimpleNamespace(success=True)]
-            analyse_HA_restriction = SingleSBSimulationSummary.analyse_HA_restriction
-            def __init__(self,has_hardcoded):
-                self.sb = FakeSB(has_hardcoded=has_hardcoded)
-                self.analysis_result = AnalysisResult()
-
-        fake_summary = FakeSummary(has_hardcoded=True)
-        fake_summary.analyse_HA_restriction()
-        assert fake_summary.analysis_result.inspection_reasons == set()
-        assert not fake_summary.analysis_result.should_be_Waiting
-
-        fake_summary = FakeSummary(has_hardcoded=False)
-        fake_summary.analyse_HA_restriction()
-        assert fake_summary.analysis_result.inspection_reasons == set()
-        assert not fake_summary.analysis_result.should_be_Waiting
-
-        fake_summary = FakeSummary(has_hardcoded=False)
-        fake_summary.sb.OT_allowed_HA = {"min":Angle(-1*u.hour),"max":Angle(12*u.hour)}
-        fake_summary.analyse_HA_restriction()
-        assert fake_summary.analysis_result.inspection_reasons\
-                                    == set(["unnecessarily restricted HA(s): -2.0"])
-        assert not fake_summary.analysis_result.should_be_Waiting
-
-        fake_summary = FakeSummary(has_hardcoded=False)
-        fake_summary.sb.OT_allowed_HA = {"min":Angle(-1*u.hour),"max":Angle(2*u.hour)}
-        fake_summary.analyse_HA_restriction()
-        assert fake_summary.analysis_result.inspection_reasons\
-                           == set(["unnecessarily restricted HA(s): -2.0, 4.0"])
-        assert not fake_summary.analysis_result.should_be_Waiting
-
-    def test_analyse_simulation_failures(self):
-        def sim_result(success,category=None):
-            fail_reason = None if success else\
-                   FailReason(error_message="a",error_summary="b",category=category)
-            return SimpleNamespace(success=success,fail_reason=fail_reason)
-        class FakeSummary:
-            HAs = [Angle(-2*u.hour),Angle(0.5*u.hour)]
-            sb = SimpleNamespace(OT_allowed_HA={"min":Angle(-4*u.hour),"max":Angle(4*u.hour)})
-            analyse_simulation_failures = SingleSBSimulationSummary.analyse_simulation_failures
-            def __init__(self):
-                self.analysis_result = AnalysisResult()
-
-        def assert_correct_analysis(simulation_results,expected_reasons,expected_waiting,
-                                    OT_allowed_HA=None):
-            fake_summary = FakeSummary()
-            if OT_allowed_HA is not None:
-                fake_summary.sb.OT_allowed_HA = OT_allowed_HA
-            fake_summary.simulation_results = simulation_results
-            fake_summary.analyse_simulation_failures()
-            assert fake_summary.analysis_result.inspection_reasons\
-                                      == expected_reasons
-            assert fake_summary.analysis_result.should_be_Waiting == expected_waiting
-
-        assert_correct_analysis(simulation_results=[sim_result(success=True),
-                                                    sim_result(success=True)],
-                                expected_reasons=set(),
-                                expected_waiting=False)
-
-        assert_correct_analysis(simulation_results=[sim_result(success=True),
-                                                    sim_result(success=False,
-                                                               category="server error")],
-                                expected_reasons=set(["server error"]),
-                                expected_waiting=False)
-
-        assert_correct_analysis(simulation_results=[sim_result(success=False,
-                                                               category="unobservable"),
-                                                    sim_result(success=False,
-                                                               category="server error")],
-                                expected_reasons=set(["server error"]),
-                                expected_waiting=False)
-        
-        assert_correct_analysis(simulation_results=[sim_result(success=False,
-                                                               category="unobservable"),
-                                                    sim_result(success=True)],
-                                expected_reasons=set(),
-                                expected_waiting=False)
-        
-        assert_correct_analysis(simulation_results=[sim_result(success=False,
-                                                               category="missing calibrator"),
-                                                    sim_result(success=False,
-                                                               category="server error")],
-                                expected_reasons=set(["server error", "simulation failure"]),
-                                expected_waiting=True)
-        
-        #making the missing calibrator failure to occur outside of allowed HA:
-        assert_correct_analysis(simulation_results=[sim_result(success=False,
-                                                               category="missing calibrator"),
-                                                    sim_result(success=False,
-                                                               category="server error")],
-                                expected_reasons=set(["server error"]),
-                                expected_waiting=False,
-                                OT_allowed_HA={"min":Angle(-1*u.hour),"max":Angle(4*u.hour)})
-
-        assert_correct_analysis(simulation_results=[sim_result(success=False,
-                                                               category="missing calibrator"),
-                                                    sim_result(success=False,
-                                                               category="exceeds 2h limit")],
-                                expected_reasons=set(["simulation failure"]),
-                                expected_waiting=True)
-
-        #server error outisde of allowed HA, should not trigger inspection:
-        assert_correct_analysis(simulation_results=[sim_result(success=False,
-                                                               category="server error"),
-                                                    sim_result(success=True)],
-                                expected_reasons=set(),
-                                expected_waiting=False,
-                                OT_allowed_HA={"min":Angle(-1*u.hour),"max":Angle(4*u.hour)})
-
-    def test_analyse_no_unexpected_error(self):
-        class FakeSimResult:
-            def __init__(self,success,category=None):
-                self.success = success
-                self.fail_reason = None if category is None\
-                                    else FailReason(error_message="bla",
-                                                    error_summary="bla",
-                                                    category=category)
-        #this SB has min allowed HA -12H and max 12H
-        sb = BuildSBFromXML.build("tests/xmls/2025.1.01279.S_general_SB.xml")
-        summary_kwargs = {"sb":sb,"config":"c43-9","date":datetime.date(1974,2,22),
-                          "unexpected_error":None}
-
-        #all success:
-        HAs = [Angle(-12*u.hour),Angle(-2*u.hour),Angle(-0*u.hour),Angle(2*u.hour),
-               Angle(4*u.hour),]
-        simulation_results = [FakeSimResult(True)]*len(HAs)
-        summary = SingleSBSimulationSummary(HAs=HAs,simulation_results=simulation_results,
-                                            **summary_kwargs)
-        summary.analyse()
-        assert summary.analysis_result.inspection_reasons == set()
-        assert not summary.analysis_result.should_be_Waiting
-        
-        #all failures:
-        simulation_results = [FakeSimResult(False,category="missing calibrator"),]*5
-        summary = SingleSBSimulationSummary(HAs=HAs,simulation_results=simulation_results,
-                                            **summary_kwargs)
-        summary.analyse()
-        assert summary.analysis_result.inspection_reasons\
-                  == set(["simulation failure","runnable HA range is small"])
-        assert summary.analysis_result.should_be_Waiting
-
-        #trigger unnecessary restricted HA
-        HAs[0] = Angle(-14*u.hour)
-        simulation_results = [FakeSimResult(True)]*len(HAs)
-        summary = SingleSBSimulationSummary(HAs=HAs,simulation_results=simulation_results,
-                                            **summary_kwargs)
-        summary.analyse()
-        assert summary.analysis_result.inspection_reasons\
-                     == set(['unnecessarily restricted HA(s): -14.0'])
-        assert not summary.analysis_result.should_be_Waiting
-"""

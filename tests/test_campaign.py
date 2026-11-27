@@ -21,7 +21,7 @@ from types import SimpleNamespace
 import math
 import pandas as pd
 import tempfile
-from batch_simulations.infrastructure.table_writer import TableWriter
+from batch_simulations.infrastructure.table_utils import TableWriter
 import itertools
 
 
@@ -51,7 +51,8 @@ class FakeFormatterForWritingTests:
 
 class TestCampaignResultFormatter:
 
-    test_sb = BuildSBFromXML.build("tests/xmls/2025.1.01279.S_general_SB.xml")
+    test_sb = BuildSBFromXML.build("tests/xmls/2025.1.01279.S_general_SB.xml",
+                                   project_code="2025.1.01279.S")
     date = datetime.date(1623,2,12)
     HAs = [Angle(-1*u.hour),Angle(1.5*u.hour)]
     fake_simulation_results = [SimpleNamespace(success=True,fail_reason=None),
@@ -85,7 +86,7 @@ class TestCampaignResultFormatter:
         formatter.create_master_dataframe()
         sorted_sb_table = self.fake_campaign.sb_table.data.sort_values("code")
         assert formatter.master_table.iloc[0]["code"] == sorted_sb_table.iloc[0].code
-        assert formatter.master_table.iloc[0]["note_to_AoD"] == self.test_sb.metadata["note_to_AoD"]
+        assert formatter.master_table.iloc[0]["note_to_AoD"] == self.test_sb.note_to_AoD
 
     def test_build_row(self):
         formatter = CampaignResultFormatter(campaign=self.fake_campaign)
@@ -125,7 +126,7 @@ class TestCampaignResultFormatter:
         row = {}
         CampaignResultFormatter.add_note_to_aod(row=row,sb=self.test_sb)
         assert len(row) == 1
-        assert row["note_to_AoD"] == self.test_sb.metadata["note_to_AoD"]
+        assert row["note_to_AoD"] == self.test_sb.note_to_AoD
 
     def test_add_hardcoded_calibrators(self):
         #SB without hardcoded calibrators:
@@ -135,7 +136,8 @@ class TestCampaignResultFormatter:
        assert row["hardcoded_calibrators"] is pd.NA
        #SB with hardcoded calibrators:
        row = {}
-       sb = BuildSBFromXML.build("tests/xmls/example_bandpass_equal_dgc.xml")
+       sb = BuildSBFromXML.build("tests/xmls/example_bandpass_equal_dgc.xml",
+                                 project_code="2022.1.00001.S")
        CampaignResultFormatter.add_hardcoded_calibrators(row=row,sb=sb)
        hardcoded_calibrators = [f"{c.cal_type} ({c.source_name})" for c in
                                 sb.calibrators if c.is_hardcoded]
@@ -146,21 +148,24 @@ class TestCampaignResultFormatter:
 
     def test_add_query_calibrators(self):
         row = {}
-        sb = BuildSBFromXML.build("tests/xmls/example_bandpass_equal_dgc.xml")
+        sb = BuildSBFromXML.build("tests/xmls/example_bandpass_equal_dgc.xml",
+                                  project_code="2022.1.00001.S")
         #fake SB with all calibrators hardcoded
         for cal in sb.calibrators:
             cal.is_hardcoded = True
         assert all([c.is_hardcoded for c in sb.calibrators])
         CampaignResultFormatter.add_query_calibrators(row=row,sb=sb)
         assert row["query_calibrators"] is pd.NA
-        sb = BuildSBFromXML.build("tests/xmls/example_bandpass_equal_dgc.xml")
+        sb = BuildSBFromXML.build("tests/xmls/example_bandpass_equal_dgc.xml",
+                                  project_code="2022.1.00001.S")
         CampaignResultFormatter.add_query_calibrators(row=row,sb=sb)
         query_cals = [f"{c.cal_type}" for c in sb.calibrators if not c.is_hardcoded]
         expected_entry = ", ".join(query_cals)
         assert row["query_calibrators"] == expected_entry
 
     def test_add_HA_limits(self):
-        sb = BuildSBFromXML.build("tests/xmls/2025.1.01279.S_general_SB.xml")
+        sb = BuildSBFromXML.build("tests/xmls/2025.1.01279.S_general_SB.xml",
+                                  project_code="2025.1.01279.S")
         HA_DSA = sb.get_DSA_HA_limits()
         OT_HA_limits = [{"min":Angle(-12*u.hour),"max":Angle(12*u.hour)},
                         HA_DSA,

@@ -11,7 +11,8 @@ import pandas as pd
 from pathlib import Path
 import logging
 import numpy as np
-from batch_simulations.infrastructure.table_writer import TableWriter
+from batch_simulations.infrastructure.table_utils import\
+                   TableWriter,contains_ToO,contains_hardcoded_calibrator
 
 
 class HAChangeWriter:
@@ -30,17 +31,28 @@ class HAChangeWriter:
 
     def get_selection_for_HA_updates(self):
         table = self.master_table
-        needs_update = {}
+        needs_HA_lim_update = {}
         for lim in ("min","max"):
             #pd.NA cannot be compared in boolean way, so have to convert:
             HA_lim_recommended = table[f"HA_{lim}_recommended"].to_numpy(dtype=float, na_value=np.nan)
             HA_lim = table[f"HA_{lim}"].to_numpy(dtype=float, na_value=np.nan)
             is_equal = self.HA_equal(HA_lim, HA_lim_recommended)
             is_different = np.logical_not(is_equal)
-            needs_update[lim] = (table[f"HA_{lim}_recommended"].notna()
-                                & is_different)
+            needs_HA_lim_update[lim] = (table[f"HA_{lim}_recommended"].notna()
+                                       & is_different)
+        needs_update = needs_HA_lim_update["min"] | needs_HA_lim_update["max"]
         ready_recommended = table["recommended_state"] == "Ready"
-        return ready_recommended & (needs_update["min"] | needs_update["max"])
+        is_ready = table["sb_state"] == "Ready"
+        is_WaitingForCalibrator = ((table["sb_state"] == "Waiting")
+                                   & (table["sb_state_flag"] == "ForCalibrator"))
+        is_eligible = is_ready | is_WaitingForCalibrator
+        selection = ready_recommended & is_eligible & needs_update
+        if contains_hardcoded_calibrator(table=self.master_table[selection]):
+            raise RuntimeError("HA limits of SBs with hardcoded calibrators "
+                               +"should not be updated")
+        if contains_ToO(table=self.master_table[selection]):
+            raise RuntimeError("HA limits of ToOs should not be updated")
+        return selection
 
     def add_HA_limit_changes(self,project_uid,sb_uid,changes):
         if not changes:

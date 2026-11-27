@@ -14,26 +14,31 @@ from batch_simulations.domain.dsa_policy import DSAPolicy
 
 class SB:
 
-    def __init__(self, calibrators, science_targets, mode_name, nominal_configs,
-                 rep_coord, OT_allowed_HA, requires_TP, total_execution_time,
-                 number_of_executions,metadata=None):
-        self.metadata = metadata or {}
+    def __init__(self, project_code ,calibrators, science_targets, mode_name,
+                 nominal_configs,rep_coord, OT_allowed_HA, requires_TP,
+                 total_execution_time,number_of_executions,note_to_AoD):
+        self.project_code = project_code
         self.calibrators = calibrators
         self.science_targets = science_targets
         self.cal_types = [c.cal_type for c in self.calibrators]
         self.mode_name = mode_name
-        self.is_Polarisation = "Polarization" in mode_name
-        self.is_VLBI = 'VLBI' in mode_name
-        self.is_Solar = 'Solar' in mode_name
-        self.is_B2B = mode_name == 'BandToBand Interferometry'
         self.nominal_configs = nominal_configs
-        self.is_7m = "7M" in self.nominal_configs
         self.rep_coord = rep_coord
         self.OT_allowed_HA = OT_allowed_HA
         self.requires_TP = requires_TP
         self.total_execution_time = total_execution_time
         self.number_of_executions = number_of_executions
+        self.note_to_AoD = note_to_AoD
         self.consistency_checks()
+
+    def is_Polarisation(self):
+        return "Polarization" in self.mode_name
+
+    def is_7m(self):
+        return "7M" in self.nominal_configs
+
+    def is_ToO(self):
+        return self.project_code.endswith(".T")
 
     def consistency_checks(self):
         cal_type_counts = Counter(self.cal_types)
@@ -45,11 +50,11 @@ class SB:
                 raise ValueError(f"multiple calibrators of type {cal_type}")
         if len(self.science_targets) < 1:
             raise ValueError("at least one science target expected")
-        if self.is_Polarisation and self.has_no_PolCal():
+        if self.is_Polarisation() and self.has_no_PolCal():
             raise ValueError("Polarization SB without PolCal")
-        if self.is_Polarisation and (not self.PolCal_is_hardcoded()):
+        if self.is_Polarisation() and (not self.PolCal_is_hardcoded()):
             raise ValueError("PolCal not hardcoded")
-        if (not self.is_Polarisation) and self.has_at_least_one_PolCal():
+        if (not self.is_Polarisation()) and self.has_at_least_one_PolCal():
             raise ValueError("SB is not Polarisation, but PolCal is present")
         logging.info("SB passed consistency checks")
 
@@ -87,12 +92,9 @@ class SB:
         return (self.OT_allowed_HA["min"].rad - tol > HA_DSA["min"].rad
                   or self.OT_allowed_HA["max"].rad + tol < HA_DSA["max"].rad)
 
-    def add_metadata(self,key,value):
-        self.metadata[key] = value
-
     def single_execution_time(self):
         single_exec = self.total_execution_time/self.number_of_executions
-        if self.is_Polarisation:
+        if self.is_Polarisation():
             #polarisation execution (session) should be at least 3 hours
             min_number_of_executions = ((3*constants.hour) // single_exec) + 1
             session_duration = single_exec*min_number_of_executions
